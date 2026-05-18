@@ -124,10 +124,15 @@
   }
   .player-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px; font-weight: 700; letter-spacing: 2px;
-    text-transform: uppercase; color: rgba(255,255,255,0.4);
+    font-size: 11px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase;
     writing-mode: vertical-rl; text-orientation: mixed;
     transform: rotate(180deg);
+    animation: labelGold 2s ease-in-out infinite;
+  }
+  @keyframes labelGold {
+    0%,100% { color: #FFD700; text-shadow: 0 0 6px rgba(255,215,0,0.4); }
+    50%      { color: #fff5a0; text-shadow: 0 0 16px rgba(255,215,0,1), 0 0 30px rgba(255,215,0,0.5); }
   }
 
   /* Card slot */
