@@ -124,15 +124,24 @@
   }
   .player-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px; font-weight: 900; letter-spacing: 2px;
+    font-size: 22px; font-weight: 900; letter-spacing: 2px;
     text-transform: uppercase;
     writing-mode: vertical-rl; text-orientation: mixed;
     transform: rotate(180deg);
-    animation: labelGold 2s ease-in-out infinite;
   }
-  @keyframes labelGold {
-    0%,100% { color: #FFD700; text-shadow: 0 0 6px rgba(255,215,0,0.4); }
-    50%      { color: #fff5a0; text-shadow: 0 0 16px rgba(255,215,0,1), 0 0 30px rgba(255,215,0,0.5); }
+  .player-label.tm-label {
+    animation: labelRed 2s ease-in-out infinite;
+  }
+  .player-label.you-label {
+    animation: labelBlue 2s ease-in-out infinite;
+  }
+  @keyframes labelRed {
+    0%,100% { color: #ff4444; text-shadow: 0 0 6px rgba(255,50,50,0.4); }
+    50%      { color: #ff9999; text-shadow: 0 0 16px rgba(255,50,50,1), 0 0 30px rgba(255,50,50,0.5); }
+  }
+  @keyframes labelBlue {
+    0%,100% { color: #3b82f6; text-shadow: 0 0 6px rgba(59,130,246,0.4); }
+    50%      { color: #93c5fd; text-shadow: 0 0 16px rgba(59,130,246,1), 0 0 30px rgba(59,130,246,0.5); }
   }
 
   /* Card slot */
@@ -796,7 +805,7 @@
 
   <!-- TROLLEY MASTER ROW -->
   <div class="player-row">
-    <div class="player-label">Trolley Master</div>
+    <div class="player-label tm-label">Trolley Master</div>
     <div class="card-slot" id="comp-slot">
       <div class="card-inner" id="comp-inner">
         <div class="card-face">
@@ -854,7 +863,7 @@
 
   <!-- PLAYER ROW -->
   <div class="player-row" style="flex-direction: row-reverse;">
-    <div class="player-label" style="transform: rotate(0deg);">You</div>
+    <div class="player-label you-label" style="transform: rotate(0deg);">You</div>
     <div class="card-slot" id="player-slot">
       <div class="card-inner" id="player-inner">
         <div class="card-face">
