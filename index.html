@@ -3,968 +3,786 @@
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/x-icon" href="logo.ico">
-<meta property="og:title" content="TOP PROD — Beat Today's Trolley Master!">
-<meta property="og:description" content="A daily nutrition card battle game. Can you empty the Trolley Master's cart?">
-<meta property="og:image" content="https://topprod.onrender.com/logo.png">
-<meta property="og:url" content="https://topprod.onrender.com">
+<meta property="og:title" content="TOP PROD — Battle of the Brands!">
+<meta property="og:description" content="A daily nutrition card battle game.">
+<meta property="og:image" content="https://topprodz.onrender.com/logo.png">
+<meta property="og:url" content="https://topprodz.onrender.com">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="TOP PROD — Beat Today's Trolley Master!">
-<meta name="twitter:description" content="A daily nutrition card battle game. Can you empty the Trolley Master's cart?">
-<meta name="twitter:image" content="https://topprod.onrender.com/logo.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>TOP PROD: Beat Today's Trolley Master</title>
+<title>TOP PROD: Battle of the Brands</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
-
-<!-- Firebase v9 compat (CDN — no build step needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
 <style>
-  :root {
-    --aldi-blue: #003DA5;
-    --aldi-orange: #FF6600;
-    --aldi-yellow: #FFD700;
-    --dark: #0a0a0f;
-    --dark2: #12121a;
-    --dark3: #1a1a2e;
-    --card-w: 155px;
-    --card-h: 240px;
-  }
+:root {
+  --blue: #003DA5;
+  --orange: #FF6600;
+  --yellow: #FFD700;
+  --dark: #0a0a0f;
+  --dark2: #12121a;
+  --dark3: #1a1a2e;
+  --green: #4ade80;
+  --red: #f87171;
+  --card-w: 148px;
+  --card-h: 232px;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body {
+  background:var(--dark); color:#fff;
+  font-family:'Barlow',sans-serif;
+  min-height:100vh; overflow-x:hidden; user-select:none;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(0,61,165,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(255,102,0,0.15) 0%, transparent 60%);
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* ── SPLASH ── */
+#splash {
+  position:fixed; inset:0; z-index:200; background:var(--dark);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:20px; padding:24px;
+}
+#splash-card {
+  width:min(160px,40vw); height:min(240px,60vw);
+  border-radius:14px; border:3px solid var(--orange);
+  background:var(--dark2); overflow:hidden;
+  box-shadow:0 0 60px rgba(255,102,0,0.5);
+  opacity:0;
+}
+#splash-card img { width:100%; height:100%; object-fit:cover; border-radius:12px; }
+#splash-title {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(36px,11vw,52px); letter-spacing:4px;
+  color:var(--orange); text-shadow:0 0 30px rgba(255,102,0,0.6);
+  opacity:0;
+}
+#splash-sub {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(11px,3.5vw,15px); font-weight:600; letter-spacing:3px;
+  color:rgba(255,255,255,0.4); text-transform:uppercase; opacity:0;
+}
+#splash.out { opacity:0; transition:opacity 0.5s; pointer-events:none; }
 
-  body {
-    background: var(--dark);
-    color: #fff;
-    font-family: 'Barlow', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-    user-select: none;
-    background-image:
-      radial-gradient(ellipse at 20% 0%, rgba(0,61,165,0.25) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 100%, rgba(255,102,0,0.15) 0%, transparent 60%);
-  }
+/* ── LOBBY ── */
+#lobby {
+  display:none; flex-direction:column; align-items:center;
+  min-height:100vh; padding:28px 20px; gap:0;
+  max-width:420px; margin:0 auto;
+}
+.lobby-logo {
+  width:68px; height:68px; border-radius:14px; overflow:hidden;
+  border:2px solid var(--orange); background:#fff;
+  display:flex; align-items:center; justify-content:center; margin-bottom:12px;
+}
+.lobby-logo img { width:82%; object-fit:contain; }
+#lobby-title {
+  font-family:'Bebas Neue',sans-serif; font-size:40px; letter-spacing:4px;
+  color:var(--orange); text-shadow:0 0 24px rgba(255,102,0,0.5); margin-bottom:4px;
+}
+#lobby-sub {
+  font-family:'Barlow Condensed',sans-serif; font-size:11px;
+  font-weight:600; letter-spacing:3px; color:rgba(255,255,255,0.35);
+  text-transform:uppercase; margin-bottom:24px;
+}
+.mode-row { display:flex; gap:8px; width:100%; margin-bottom:24px; }
+.mode-btn {
+  flex:1; padding:14px 8px; border-radius:14px;
+  border:2px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; font-weight:700; letter-spacing:1.5px;
+  text-transform:uppercase; color:rgba(255,255,255,0.4);
+  cursor:pointer; text-align:center; transition:all 0.15s;
+}
+.mode-btn .mi { font-size:22px; display:block; margin-bottom:4px; }
+.mode-btn.active {
+  background:rgba(255,102,0,0.15); border-color:var(--orange);
+  color:#fff; box-shadow:0 0 16px rgba(255,102,0,0.2);
+}
+.panel {
+  width:100%; background:rgba(255,255,255,0.03);
+  border:1.5px solid rgba(255,255,255,0.08);
+  border-radius:18px; padding:20px; margin-bottom:12px;
+}
+.panel-title {
+  font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:2px;
+  color:rgba(255,255,255,0.4); margin-bottom:14px;
+}
+.inp {
+  width:100%; background:rgba(255,255,255,0.06);
+  border:1.5px solid rgba(255,255,255,0.12);
+  border-radius:10px; padding:12px 14px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:16px; font-weight:700; letter-spacing:1px;
+  color:#fff; outline:none; margin-bottom:10px;
+}
+.inp:focus { border-color:var(--orange); }
+.inp::placeholder { color:rgba(255,255,255,0.2); }
+.inp.code-inp {
+  text-transform:uppercase; letter-spacing:8px;
+  font-size:26px; text-align:center;
+}
+.btn {
+  width:100%; padding:14px; border-radius:12px; border:none;
+  font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px;
+  cursor:pointer; transition:transform 0.1s;
+}
+.btn:active { transform:scale(0.97); }
+.btn.primary { background:var(--orange); color:#fff; box-shadow:0 4px 20px rgba(255,102,0,0.4); }
+.btn.ghost {
+  background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);
+  border:1.5px solid rgba(255,255,255,0.12); margin-top:8px; font-size:16px;
+}
+.divider {
+  display:flex; align-items:center; gap:10px; margin:4px 0 10px;
+}
+.divider hr { flex:1; border:none; border-top:1px solid rgba(255,255,255,0.07); }
+.divider span { font-size:11px; color:rgba(255,255,255,0.2); letter-spacing:1px; }
+.err { color:#f87171; font-size:12px; font-weight:600; text-align:center; min-height:16px; margin-top:6px; font-family:'Barlow Condensed',sans-serif; }
 
-  /* ── SPLASH ── */
-  #splash {
-    position: fixed; inset: 0; z-index: 200;
-    background: var(--dark);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 20px; padding: 24px;
-  }
-  #splash-logo-wrap {
-    width: min(180px, 44vw);
-    height: min(270px, 66vw);
-  }
-  #splash-card {
-    width: 100%; height: 100%;
-    border-radius: 14px;
-    box-shadow: 0 0 60px rgba(255,102,0,0.5), 0 0 120px rgba(0,61,165,0.3);
-    border: 3px solid var(--aldi-orange);
-    background: var(--dark2);
-    display: flex; align-items: center; justify-content: center;
-    position: relative;
-    opacity: 0;
-    transform: scale(0.3) rotateY(-180deg);
-  }
-  #splash-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
-  #splash-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(36px, 11vw, 52px); letter-spacing: 4px;
-    color: var(--aldi-orange);
-    text-shadow: 0 0 30px rgba(255,102,0,0.6);
-    animation: fadeUp 0.6s 0.8s both;
-  }
-  #splash-sub {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: clamp(11px, 3.5vw, 16px); font-weight: 600; letter-spacing: 3px;
-    color: rgba(255,255,255,0.5); text-transform: uppercase;
-    animation: fadeUp 0.6s 1s both;
-  }
-  #splash.hiding { opacity: 0; transition: opacity 0.5s; pointer-events: none; }
-  @keyframes fadeUp {
-    from { opacity:0; transform:translateY(16px); }
-    to   { opacity:1; transform:translateY(0); }
-  }
+/* ── WAITING ROOM ── */
+#waiting {
+  display:none; flex-direction:column; align-items:center;
+  min-height:100vh; padding:32px 20px; gap:14px;
+  max-width:420px; margin:0 auto;
+}
+#waiting-title {
+  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:3px;
+  color:rgba(255,255,255,0.5);
+}
+#room-code {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(64px,20vw,88px); letter-spacing:12px;
+  color:var(--yellow); text-shadow:0 0 40px rgba(255,215,0,0.4);
+}
+#waiting-sub {
+  font-family:'Barlow Condensed',sans-serif; font-size:13px;
+  font-weight:600; letter-spacing:0.5px; color:rgba(255,255,255,0.35);
+  text-align:center;
+}
+#player-list { width:100%; display:flex; flex-direction:column; gap:7px; }
+.p-entry {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:10px; padding:10px 14px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:15px; font-weight:700; letter-spacing:0.5px;
+}
+.p-entry.me { border-color:rgba(59,130,246,0.35); background:rgba(59,130,246,0.07); }
+.p-entry .pe-tag {
+  margin-left:auto; font-size:9px; letter-spacing:1px;
+  color:var(--yellow); font-weight:900;
+}
+.spinner {
+  width:32px; height:32px;
+  border:3px solid rgba(255,255,255,0.08);
+  border-top-color:var(--orange);
+  border-radius:50%; animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+#start-btn {
+  width:100%; padding:16px; background:var(--orange); color:#fff; border:none;
+  font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:3px;
+  border-radius:16px; cursor:pointer; display:none;
+  box-shadow:0 4px 24px rgba(255,102,0,0.5);
+  animation:pulse-orange 1.8s ease-in-out infinite;
+}
+@keyframes pulse-orange {
+  0%,100% { box-shadow:0 4px 24px rgba(255,102,0,0.5); }
+  50%      { box-shadow:0 4px 36px rgba(255,102,0,0.9), 0 0 0 4px rgba(255,102,0,0.15); }
+}
+#leave-btn {
+  background:none; border:1.5px solid rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.35); font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; font-weight:700; letter-spacing:1px;
+  padding:10px 24px; border-radius:20px; cursor:pointer;
+}
 
-  /* ── LOBBY SCREEN ── */
-  #lobby {
-    display: none; flex-direction: column;
-    align-items: center; justify-content: center;
-    min-height: 100vh; padding: 24px;
-    gap: 0;
-    max-width: 440px; margin: 0 auto;
-  }
-  #lobby-logo {
-    width: 70px; height: 70px;
-    border-radius: 14px; overflow: hidden;
-    border: 2px solid var(--aldi-orange);
-    background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 12px;
-  }
-  #lobby-logo img { width: 80%; object-fit: contain; }
-  #lobby-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 38px; letter-spacing: 4px;
-    color: var(--aldi-orange);
-    text-shadow: 0 0 24px rgba(255,102,0,0.5);
-    margin-bottom: 4px;
-  }
-  #lobby-sub {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px; font-weight: 600; letter-spacing: 3px;
-    color: rgba(255,255,255,0.4); text-transform: uppercase;
-    margin-bottom: 28px;
-  }
+/* ── GAME SCREEN ── */
+#game { display:none; flex-direction:column; max-width:420px; margin:0 auto; padding:0 10px 16px; min-height:100vh; }
 
-  /* Mode toggle */
-  .lobby-mode-row {
-    display: flex; gap: 8px; margin-bottom: 28px; width: 100%;
-  }
-  .lobby-mode-btn {
-    flex: 1; padding: 14px 8px;
-    border-radius: 14px; border: 2px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.04);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: rgba(255,255,255,0.5);
-    cursor: pointer; text-align: center;
-    transition: all 0.18s;
-  }
-  .lobby-mode-btn.active {
-    background: rgba(255,102,0,0.15);
-    border-color: var(--aldi-orange);
-    color: #fff;
-    box-shadow: 0 0 16px rgba(255,102,0,0.25);
-  }
-  .lobby-mode-btn .lmb-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+/* top bar */
+#top-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 0 8px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+}
+#top-bar-title { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:3px; color:var(--orange); }
+#top-bar-sub { font-size:9px; color:rgba(255,255,255,0.3); letter-spacing:2px; text-transform:uppercase; }
+#rules-btn {
+  background:rgba(255,255,255,0.07); border:1.5px solid rgba(255,255,255,0.15);
+  color:#fff; border-radius:20px; height:26px; padding:0 12px;
+  font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:1.5px;
+  text-transform:uppercase; cursor:pointer;
+  animation:rules-pulse 1.8s ease-in-out infinite;
+}
+@keyframes rules-pulse {
+  0%,100% { border-color:rgba(255,255,255,0.15); color:#fff; box-shadow:none; }
+  50% { border-color:#ff1493; color:#ff1493; box-shadow:0 0 12px rgba(255,20,147,0.6); }
+}
 
-  /* Lobby card panels */
-  .lobby-panel {
-    width: 100%; background: rgba(255,255,255,0.04);
-    border: 1.5px solid rgba(255,255,255,0.1);
-    border-radius: 18px; padding: 20px;
-    margin-bottom: 14px;
-  }
-  .lobby-panel-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px; letter-spacing: 2px;
-    color: rgba(255,255,255,0.5); margin-bottom: 12px;
-  }
-  .lobby-input {
-    width: 100%; background: rgba(255,255,255,0.07);
-    border: 1.5px solid rgba(255,255,255,0.15);
-    border-radius: 10px; padding: 12px 14px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px; font-weight: 700; letter-spacing: 1px;
-    color: #fff; outline: none; margin-bottom: 10px;
-  }
-  .lobby-input:focus { border-color: var(--aldi-orange); }
-  .lobby-input::placeholder { color: rgba(255,255,255,0.25); }
-  .lobby-btn {
-    width: 100%; padding: 14px;
-    border-radius: 12px; border: none;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px; letter-spacing: 2px;
-    cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
-  }
-  .lobby-btn:active { transform: scale(0.97); }
-  .lobby-btn.primary {
-    background: var(--aldi-orange); color: #fff;
-    box-shadow: 0 4px 20px rgba(255,102,0,0.4);
-  }
-  .lobby-btn.secondary {
-    background: rgba(255,255,255,0.08); color: #fff;
-    border: 1.5px solid rgba(255,255,255,0.15);
-    margin-top: 8px; font-size: 15px;
-  }
-  .lobby-divider {
-    display: flex; align-items: center; gap: 10px;
-    margin: 4px 0 10px;
-  }
-  .lobby-divider hr { flex: 1; border: none; border-top: 1px solid rgba(255,255,255,0.08); }
-  .lobby-divider span { font-size: 11px; color: rgba(255,255,255,0.25); letter-spacing: 1px; }
-  .lobby-error {
-    color: #f87171; font-size: 12px; font-weight: 600;
-    text-align: center; min-height: 16px; margin-top: 4px;
-    font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
-  }
+/* live bar */
+#live-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:5px 0; font-family:'Barlow Condensed',sans-serif;
+  font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+  color:rgba(255,255,255,0.35); border-bottom:1px solid rgba(255,255,255,0.05);
+}
+#live-dot {
+  display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:var(--green); margin-right:5px;
+  animation:blink 1.2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+#live-room { color:var(--yellow); }
 
-  /* ── WAITING ROOM ── */
-  #waiting {
-    display: none; flex-direction: column;
-    align-items: center; justify-content: center;
-    min-height: 100vh; padding: 24px;
-    gap: 16px; max-width: 440px; margin: 0 auto;
-  }
-  #room-code-display {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(52px, 18vw, 80px); letter-spacing: 10px;
-    color: var(--aldi-yellow);
-    text-shadow: 0 0 40px rgba(255,215,0,0.4);
-    text-align: center;
-  }
-  #waiting-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px; letter-spacing: 3px;
-    color: rgba(255,255,255,0.6); text-align: center;
-  }
-  #waiting-sub {
-    font-size: 13px; color: rgba(255,255,255,0.35);
-    text-align: center; letter-spacing: 0.5px;
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
-  }
-  #players-list {
-    width: 100%; display: flex; flex-direction: column; gap: 8px;
-    max-height: 220px; overflow-y: auto;
-  }
-  .player-entry {
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px; padding: 10px 14px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px; font-weight: 700; letter-spacing: 1px;
-    transition: background 0.2s;
-  }
-  .player-entry.you { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); }
-  .player-entry .pe-icon { font-size: 20px; }
-  .player-entry .pe-host { font-size: 9px; letter-spacing: 1px; color: var(--aldi-yellow); font-weight: 900; }
-  #waiting-start-btn {
-    width: 100%; padding: 16px;
-    background: var(--aldi-orange); color: #fff; border: none;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 24px; letter-spacing: 3px;
-    border-radius: 16px; cursor: pointer;
-    box-shadow: 0 4px 24px rgba(255,102,0,0.5);
-    animation: sharePulse 1.8s ease-in-out infinite;
-    display: none;
-  }
-  #waiting-leave-btn {
-    background: none; border: 1.5px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.4); font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 700; letter-spacing: 1px;
-    padding: 10px 24px; border-radius: 20px; cursor: pointer;
-  }
-  .waiting-spinner {
-    width: 36px; height: 36px;
-    border: 3px solid rgba(255,255,255,0.1);
-    border-top-color: var(--aldi-orange);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* scoreboard */
+#scoreboard {
+  display:flex; flex-wrap:wrap; gap:6px;
+  padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.sb-chip {
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:8px; padding:4px 10px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; font-weight:700;
+}
+.sb-chip.me { background:rgba(59,130,246,0.12); border-color:rgba(59,130,246,0.3); }
+.sb-chip.active-turn { border-color:var(--orange); background:rgba(255,102,0,0.1); }
+.sb-chip.eliminated { opacity:0.3; }
+.sb-chip .sb-cards { color:var(--yellow); font-size:15px; margin-left:2px; }
 
-  /* ── LIVE TABLE HEADER BAR (multiplayer only) ── */
-  #live-bar {
-    display: none;
-    background: rgba(0,61,165,0.25);
-    border-bottom: 1px solid rgba(0,61,165,0.4);
-    padding: 6px 12px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; color: rgba(255,255,255,0.6);
-    max-width: 440px; margin: 0 auto;
-    align-items: center; justify-content: space-between;
-  }
-  #live-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #4ade80;
-    animation: livePulse 1.2s ease-in-out infinite;
-    display: inline-block; margin-right: 5px;
-  }
-  @keyframes livePulse {
-    0%,100% { opacity: 1; }
-    50%      { opacity: 0.3; }
-  }
-  #live-room-label { color: var(--aldi-yellow); }
+/* turn banner */
+#turn-banner {
+  text-align:center; padding:7px 12px; margin:6px 0;
+  background:rgba(255,102,0,0.08); border:1px solid rgba(255,102,0,0.2);
+  border-radius:8px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px; font-weight:800; letter-spacing:1px; color:rgba(255,255,255,0.7);
+}
+#turn-banner.my-turn {
+  background:rgba(74,222,128,0.1); border-color:rgba(74,222,128,0.3); color:var(--green);
+}
 
-  /* ── SCOREBOARD PANEL (multiplayer) ── */
-  #scoreboard-panel {
-    display: none;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px; padding: 10px 12px;
-    margin: 6px 0;
-    max-width: 440px;
-  }
-  #scoreboard-panel .sb-title {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 9px; font-weight: 900; letter-spacing: 2px;
-    color: rgba(255,255,255,0.3); text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-  #scoreboard-list { display: flex; flex-wrap: wrap; gap: 6px; }
-  .sb-entry {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,0.05); border-radius: 8px;
-    padding: 4px 10px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 700;
-  }
-  .sb-entry.sb-you { background: rgba(59,130,246,0.15); }
-  .sb-entry .sb-score { color: var(--aldi-yellow); margin-left: 4px; font-size: 15px; }
-  .sb-entry.sb-winner { border: 1.5px solid #4ade80; }
+/* status */
+#status {
+  text-align:center; padding:5px 12px; min-height:26px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; font-weight:800; letter-spacing:0.5px; color:#fff;
+}
 
-  /* ── TURN INDICATOR ── */
-  #turn-banner {
-    display: none;
-    text-align: center; padding: 6px 12px;
-    background: rgba(255,102,0,0.12);
-    border: 1px solid rgba(255,102,0,0.25);
-    border-radius: 8px; margin: 4px 0;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 800; letter-spacing: 1px;
-    color: #fff;
-  }
-  #turn-banner.your-turn-banner {
-    background: rgba(74,222,128,0.12);
-    border-color: rgba(74,222,128,0.3);
-    color: #4ade80;
-  }
+/* ── MY CARD AREA ── */
+#my-card-area {
+  display:flex; align-items:center; gap:10px; padding:8px 0;
+}
+.my-label {
+  font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900;
+  letter-spacing:2px; text-transform:uppercase;
+  writing-mode:vertical-rl; transform:rotate(180deg);
+  animation:glow-blue 2s ease-in-out infinite;
+}
+@keyframes glow-blue {
+  0%,100%{color:#3b82f6;text-shadow:0 0 6px rgba(59,130,246,0.3);}
+  50%{color:#93c5fd;text-shadow:0 0 18px rgba(59,130,246,1);}
+}
+.my-stack { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+.stack-box {
+  width:54px; height:72px; background:var(--dark3);
+  border:2px solid rgba(255,255,255,0.1); border-radius:10px;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.stack-box::before,.stack-box::after {
+  content:''; position:absolute; background:var(--dark3);
+  border:2px solid rgba(255,255,255,0.06); border-radius:10px;
+  width:100%; height:100%; z-index:-1;
+}
+.stack-box::before{transform:translate(-3px,-3px);}
+.stack-box::after{transform:translate(-6px,-6px);}
+.stack-n { font-family:'Bebas Neue',sans-serif; font-size:26px; color:rgba(255,255,255,0.45); }
+.stack-lbl { font-size:8px; letter-spacing:1px; text-transform:uppercase; color:#fff; font-weight:800; }
 
-  /* ── GAME SCREEN ── */
-  #game {
-    display: none; flex-direction: column;
-    min-height: 100vh; max-width: 440px;
-    margin: 0 auto; padding: 0 12px 12px;
-  }
+/* card slot */
+.card-slot { width:var(--card-w); height:var(--card-h); flex-shrink:0; perspective:900px; position:relative; }
+.card-inner {
+  width:100%; height:100%; transform-style:preserve-3d;
+  transition:transform 0.55s cubic-bezier(.4,0,.2,1);
+  position:relative; border-radius:14px;
+}
+.card-face,.card-back { position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; }
+.card-face {
+  background:var(--dark2); border:2px solid rgba(255,255,255,0.1);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.card-face img { width:100%; height:100%; object-fit:cover; border-radius:12px; }
+.card-back {
+  transform:rotateY(180deg); background:#fff;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.card-inner.flipped { transform:rotateY(180deg); }
+.cf-hdr {
+  background:var(--blue); padding:4px 6px;
+  display:flex; align-items:center; gap:4px; flex-shrink:0;
+}
+.cf-logo { width:18px; height:18px; object-fit:contain; background:#fff; border-radius:3px; padding:1px; flex-shrink:0; }
+.cf-name {
+  font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:900;
+  color:#fff; line-height:1.15; text-transform:uppercase;
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+.cf-body { display:flex; flex:1; overflow:hidden; }
+.cf-img { width:46%; flex-shrink:0; background:#f0f4ff; display:flex; align-items:center; justify-content:center; padding:4px; border-right:1px solid #e0e8ff; overflow:hidden; }
+.cf-img img { width:100%; height:100%; object-fit:contain; }
+.cf-rows { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.cf-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:0 5px; flex:1; border-bottom:1px solid rgba(0,0,0,0.06);
+}
+.cf-row:nth-child(odd){background:#eef2ff;}
+.cf-row:nth-child(even){background:#fff;}
+.cf-rlbl { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; color:#444; text-transform:uppercase; white-space:nowrap; }
+.cf-rval { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:900; color:var(--blue); white-space:nowrap; }
+.cf-price { background:var(--orange); padding:4px 6px; text-align:center; flex-shrink:0; font-family:'Bebas Neue',sans-serif; font-size:14px; color:#fff; letter-spacing:1px; border-radius:0 0 14px 14px; }
+.zoom-btn {
+  position:absolute; bottom:6px; right:6px; z-index:10;
+  width:24px; height:24px; background:rgba(0,0,0,0.7);
+  border:1px solid rgba(255,255,255,0.3); border-radius:6px;
+  color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; opacity:0; transition:opacity 0.2s;
+}
+.card-slot.revealed .zoom-btn { opacity:1; }
+@keyframes pulse-glow { 0%,100%{box-shadow:0 0 0 0 rgba(255,102,0,0);} 50%{box-shadow:0 0 0 6px rgba(255,102,0,0.3);} }
+.card-slot.your-turn .card-inner { animation:pulse-glow 1.5s infinite; border-radius:14px; }
 
-  /* Header */
-  #hdr {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 0 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  #hdr-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--aldi-orange); }
-  #hdr-sub { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 2px; text-transform: uppercase; }
-  #score-row { display: flex; gap: 10px; align-items: center; }
-  .score-pill {
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px; padding: 4px 12px;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 700;
-  }
-  .score-pill span { color: var(--aldi-yellow); font-size: 16px; }
+/* ── MIDDLE ── */
+#middle { display:flex; gap:8px; margin:6px 0; align-items:stretch; }
 
-  /* ── COMPUTER ROW ── */
-  .player-row {
-    display: flex; align-items: center;
-    gap: 10px; padding: 10px 0;
-  }
-  .player-label {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px; font-weight: 900; letter-spacing: 2px;
-    text-transform: uppercase;
-    writing-mode: vertical-rl; text-orientation: mixed;
-    transform: rotate(180deg);
-  }
-  .player-label.tm-label { animation: labelRed 2s ease-in-out infinite; }
-  .player-label.you-label { animation: labelBlue 2s ease-in-out infinite; }
-  @keyframes labelRed {
-    0%,100% { color: #ff4444; text-shadow: 0 0 6px rgba(255,50,50,0.4); }
-    50%      { color: #ff9999; text-shadow: 0 0 16px rgba(255,50,50,1), 0 0 30px rgba(255,50,50,0.5); }
-  }
-  @keyframes labelBlue {
-    0%,100% { color: #3b82f6; text-shadow: 0 0 6px rgba(59,130,246,0.4); }
-    50%      { color: #93c5fd; text-shadow: 0 0 16px rgba(59,130,246,1), 0 0 30px rgba(59,130,246,0.5); }
-  }
+/* pile */
+#pile-wrap { display:flex; flex-direction:column; align-items:center; gap:5px; min-width:68px; }
+#pile-box {
+  width:56px; height:76px; border:2px dashed rgba(255,255,255,0.12);
+  border-radius:10px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; position:relative;
+  background:rgba(255,255,255,0.02);
+}
+#pile-n { font-family:'Bebas Neue',sans-serif; font-size:22px; color:rgba(255,255,255,0.25); }
+#pile-lbl { font-size:8px; color:rgba(255,255,255,0.2); letter-spacing:1px; text-transform:uppercase; }
+#dealer-deck {
+  position:absolute; inset:-2px; background:var(--dark3);
+  border:2px solid var(--orange); border-radius:10px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow:0 0 20px rgba(255,102,0,0.3);
+}
+#dealer-deck img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
+#deal-btn {
+  background:var(--orange); color:#fff; border:none;
+  font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:2px;
+  padding:7px 14px; border-radius:20px; cursor:pointer;
+  box-shadow:0 4px 16px rgba(255,102,0,0.4);
+}
 
-  /* Card slot */
-  .card-slot { width: var(--card-w); height: var(--card-h); flex-shrink: 0; perspective: 900px; position: relative; }
-  .card-inner {
-    width: 100%; height: 100%;
-    transform-style: preserve-3d;
-    transition: transform 0.55s cubic-bezier(.4,0,.2,1);
-    position: relative; border-radius: 14px;
-  }
-  .card-face, .card-back-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 14px; }
-  .card-back-face { transform: rotateY(180deg); background: #fff; overflow: hidden; }
-  .card-face {
-    background: var(--dark2); border: 2px solid rgba(255,255,255,0.1);
-    display: flex; align-items: center; justify-content: center;
-    position: absolute; inset: 0; flex-direction: column; overflow: visible;
-  }
-  .card-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; border-radius: 14px; }
-  .card-inner.flipped { transform: rotateY(180deg); }
-  .card-back-face {
-    transform: rotateY(180deg); background: #fff;
-    display: flex; flex-direction: column; overflow: hidden; border-radius: 14px;
-  }
-  .cf-header {
-    background: var(--aldi-blue); padding: 4px 6px;
-    display: flex; align-items: center; gap: 4px; flex-shrink: 0;
-  }
-  .cf-logo { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; background: #fff; border-radius: 3px; padding: 1px; }
-  .cf-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px; font-weight: 900; color: #fff;
-    line-height: 1.15; text-transform: uppercase; letter-spacing: 0.3px;
-    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  }
-  .cf-body { display: flex; flex: 1; overflow: hidden; }
-  .cf-img-wrap { width: 46%; flex-shrink: 0; background: #f0f4ff; display: flex; align-items: center; justify-content: center; padding: 4px; border-right: 1px solid #e0e8ff; overflow: hidden; }
-  .cf-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
-  .cf-rows { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  .cf-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0 5px; flex: 1; border-bottom: 1px solid rgba(0,0,0,0.06);
-  }
-  .cf-row:nth-child(odd)  { background: #eef2ff; }
-  .cf-row:nth-child(even) { background: #fff; }
-  .cf-row-label { font-family: 'Barlow Condensed', sans-serif; font-size: 9.5px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.1px; white-space: nowrap; }
-  .cf-row-val   { font-family: 'Barlow Condensed', sans-serif; font-size: 10.5px; font-weight: 900; color: var(--aldi-blue); white-space: nowrap; margin-left: 2px; }
-  .cf-price { background: var(--aldi-orange); padding: 4px 6px; text-align: center; flex-shrink: 0; font-family: 'Bebas Neue', sans-serif; font-size: 15px; color: #fff; letter-spacing: 1px; border-radius: 0 0 14px 14px; }
+/* mod grid */
+#mod-grid { flex:1; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:4px; min-height:106px; }
+#mod-grid.remixing { animation:remix 0.7s ease-in-out; }
+@keyframes remix { 0%{opacity:1;filter:brightness(1);} 20%{opacity:0;filter:brightness(4);} 50%{opacity:1;filter:brightness(2.5);} 100%{opacity:1;filter:brightness(1);} }
+.mod-cell { cursor:pointer; border-radius:9px; position:relative; }
+.mod-inner {
+  width:100%; height:100%; min-height:48px;
+  background:var(--dark3); border:1.5px solid rgba(255,102,0,0.5);
+  border-radius:9px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; padding:3px; gap:2px;
+  transition:background 0.12s; position:relative; overflow:hidden;
+}
+.mod-cell:not(.used):active .mod-inner { background:rgba(255,102,0,0.18); }
+.mod-icon { font-size:14px; line-height:1; }
+.mod-lbl { font-family:'Barlow Condensed',sans-serif; font-size:7px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.3px; text-align:center; line-height:1.2; }
+.mod-stamp {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.6); border-radius:8px;
+  font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:2px; color:#ef4444;
+  border:2px solid #ef4444; transform:rotate(-18deg) scale(0);
+  transition:transform 0.3s cubic-bezier(.17,.67,.35,1.5); pointer-events:none;
+}
+.mod-cell.used .mod-stamp { transform:rotate(-18deg) scale(1); }
+.mod-cell.used .mod-inner { background:rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.05); cursor:not-allowed; }
+.mod-cell.used .mod-lbl,.mod-cell.used .mod-icon { opacity:0.2; }
+.mod-cell.locked .mod-inner { opacity:0.5; cursor:not-allowed; }
 
-  /* Zoom button on card */
-  .zoom-btn {
-    position: absolute; bottom: 6px; right: 6px; z-index: 10;
-    width: 26px; height: 26px;
-    background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 6px; color: #fff; font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; opacity: 0; transition: opacity 0.3s;
-    backdrop-filter: blur(4px);
-  }
-  .card-slot:hover .zoom-btn, .card-slot.revealed .zoom-btn { opacity: 1; }
+/* swap */
+#swap-area { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:68px; }
+#swap-top { font-family:'Barlow Condensed',sans-serif; font-size:8px; font-weight:900; letter-spacing:2px; color:var(--yellow); text-transform:uppercase; text-align:center; }
+#swap-btn {
+  background:linear-gradient(135deg,#92400e,#d97706);
+  color:#fff; border:2px solid var(--yellow);
+  font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:1px;
+  padding:9px 7px; border-radius:10px; cursor:pointer; width:100%;
+  box-shadow:0 0 12px rgba(217,119,6,0.4); transition:opacity 0.2s;
+}
+#swap-btn:disabled { opacity:0.3; cursor:not-allowed; box-shadow:none; }
+#swap-n { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; color:var(--yellow); letter-spacing:1px; text-align:center; }
+#swap-hint { font-size:8px; color:rgba(255,255,255,0.25); text-align:center; letter-spacing:0.3px; font-style:italic; }
 
-  /* Stack */
-  .stack-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-  .stack-box {
-    width: 56px; height: 76px; background: var(--dark3);
-    border: 2px solid rgba(255,255,255,0.1); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center; position: relative;
-  }
-  .stack-box::before, .stack-box::after {
-    content: ''; position: absolute; background: var(--dark3);
-    border: 2px solid rgba(255,255,255,0.07); border-radius: 10px;
-    width: 100%; height: 100%; z-index: -1;
-  }
-  .stack-box::before { transform: translate(-3px, -3px); }
-  .stack-box::after  { transform: translate(-6px, -6px); }
-  .stack-count { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: rgba(255,255,255,0.5); }
-  .stack-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #ffffff; font-weight: 800; }
+/* ── OPPONENTS AREA ── */
+#opponents { display:flex; flex-wrap:wrap; gap:8px; padding:8px 0; justify-content:center; }
+.opp-card {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  min-width:80px;
+}
+.opp-name {
+  font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:900;
+  letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,0.6);
+  text-align:center;
+}
+.opp-slot {
+  width:80px; height:124px; perspective:600px; position:relative;
+}
+.opp-inner {
+  width:100%; height:100%; transform-style:preserve-3d;
+  transition:transform 0.5s cubic-bezier(.4,0,.2,1);
+  border-radius:10px; position:relative;
+}
+.opp-face,.opp-back { position:absolute; inset:0; backface-visibility:hidden; border-radius:10px; }
+.opp-face { background:var(--dark2); border:1.5px solid rgba(255,255,255,0.1); overflow:hidden; }
+.opp-face img { width:100%; height:100%; object-fit:cover; border-radius:9px; }
+.opp-back {
+  transform:rotateY(180deg); background:#fff;
+  display:flex; flex-direction:column; overflow:hidden; border-radius:10px;
+}
+.opp-inner.flipped { transform:rotateY(180deg); }
+.opp-hdr { background:var(--blue); padding:3px 4px; flex-shrink:0; }
+.opp-hdr-name {
+  font-family:'Barlow Condensed',sans-serif; font-size:7.5px; font-weight:900;
+  color:#fff; text-transform:uppercase; line-height:1.2;
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+.opp-img { flex:1; background:#f0f4ff; display:flex; align-items:center; justify-content:center; padding:3px; overflow:hidden; }
+.opp-img img { width:100%; height:100%; object-fit:contain; }
+.opp-price { background:var(--orange); padding:3px 4px; text-align:center; font-family:'Bebas Neue',sans-serif; font-size:11px; color:#fff; border-radius:0 0 9px 9px; }
+.opp-count {
+  font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700;
+  color:rgba(255,255,255,0.4); letter-spacing:0.5px;
+}
+.opp-card.eliminated .opp-slot { opacity:0.25; }
+.opp-card.eliminated .opp-name { color:var(--red); text-decoration:line-through; }
+.opp-card.winner-highlight { animation:winner-flash 0.5s ease-in-out 3; }
+@keyframes winner-flash { 0%,100%{filter:brightness(1);} 50%{filter:brightness(2) drop-shadow(0 0 12px var(--yellow));} }
 
-  /* ── MIDDLE SECTION ── */
-  #middle { display: flex; gap: 10px; margin: 8px 0; align-items: stretch; }
+/* deal anim */
+.deal-anim {
+  position:fixed; z-index:90; pointer-events:none;
+  width:46px; height:68px; background:var(--dark3);
+  border:2px solid var(--orange); border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.4s cubic-bezier(.25,1,.5,1);
+  box-shadow:0 4px 16px rgba(255,102,0,0.3);
+}
+.deal-anim img { width:75%; opacity:0.7; object-fit:contain; }
 
-  /* Central pile */
-  #pile-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; }
-  #pile-box {
-    width: 60px; height: 80px; border: 2px dashed rgba(255,255,255,0.15);
-    border-radius: 10px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; position: relative;
-    background: rgba(255,255,255,0.02);
-  }
-  #pile-count { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: rgba(255,255,255,0.3); }
-  #pile-label { font-size: 9px; color: rgba(255,255,255,0.25); letter-spacing: 1px; text-transform: uppercase; }
+/* swap toast */
+#swap-toast {
+  position:fixed; top:50%; left:50%; z-index:160;
+  transform:translate(-50%,-50%) scale(0.85); opacity:0; pointer-events:none;
+  background:linear-gradient(135deg,rgba(146,64,14,0.95),rgba(217,119,6,0.95));
+  border:2px solid var(--yellow); border-radius:20px;
+  padding:20px 28px; text-align:center; gap:8px;
+  display:flex; flex-direction:column; align-items:center;
+  box-shadow:0 0 40px rgba(217,119,6,0.5);
+}
+#swap-toast.show { transform:translate(-50%,-50%) scale(1); opacity:1; transition:transform 0.3s cubic-bezier(.17,.67,.35,1.4),opacity 0.25s; }
+#swap-toast.out  { transform:translate(-50%,-50%) scale(0.85); opacity:0; transition:transform 0.2s,opacity 0.2s; }
+#swap-toast-icon { font-size:42px; }
+#swap-toast-txt  { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:#fff; }
 
-  #dealer-deck {
-    position: absolute; inset: -2px; background: var(--dark3);
-    border: 2px solid var(--aldi-orange); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center; cursor: pointer;
-    box-shadow: 0 0 20px rgba(255,102,0,0.3); transition: transform 0.1s, box-shadow 0.2s;
-  }
-  #dealer-deck:active { transform: scale(0.95); }
-  #dealer-deck img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+/* ── ROUND RESULT OVERLAY ── */
+#result-overlay {
+  position:fixed; inset:0; z-index:170;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none; opacity:0; transition:opacity 0.25s;
+}
+#result-overlay.show { pointer-events:all; opacity:1; }
+#result-overlay.out  { opacity:0; pointer-events:none; transition:opacity 0.3s; }
+#result-bg { position:absolute; inset:0; opacity:0; transition:opacity 0.25s; }
+#result-overlay.show #result-bg { opacity:1; }
+#result-card {
+  position:relative; z-index:1; text-align:center; padding:40px 28px;
+  border-radius:24px; min-width:300px; max-width:340px;
+  transform:scale(0.5); opacity:0;
+  transition:transform 0.4s cubic-bezier(.17,.67,.35,1.4),opacity 0.3s;
+  border:3px solid rgba(255,255,255,0.15); backdrop-filter:blur(20px);
+}
+#result-overlay.show #result-card { transform:scale(1); opacity:1; }
+#result-overlay.out #result-card  { transform:scale(1.1); opacity:0; transition:transform 0.25s,opacity 0.25s; }
+#result-emoji  { font-size:80px; line-height:1; margin-bottom:10px; display:block; }
+#result-head   { font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:4px; line-height:1; margin-bottom:6px; }
+#result-detail { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:600; color:rgba(255,255,255,0.8); margin-bottom:14px; line-height:1.4; }
+#result-scores { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.rs-box { background:rgba(0,0,0,0.3); border-radius:10px; padding:7px 14px; min-width:80px; text-align:center; }
+.rs-name { font-size:10px; text-transform:uppercase; letter-spacing:1px; opacity:0.55; }
+.rs-val  { font-family:'Bebas Neue',sans-serif; font-size:24px; line-height:1; }
+.rs-box.winner { border:2px solid var(--yellow); }
+.rs-box.winner .rs-val { color:var(--yellow); }
+#result-card.win  { background:rgba(5,90,10,0.88); }
+#result-card.win  #result-head { color:var(--green); }
+#result-bg.win    { background:radial-gradient(ellipse at center, rgba(22,163,74,0.6) 0%, rgba(0,0,0,0.85) 70%); }
+#result-card.lose { background:rgba(90,5,5,0.88); }
+#result-card.lose #result-head { color:var(--red); }
+#result-bg.lose   { background:radial-gradient(ellipse at center, rgba(185,28,28,0.6) 0%, rgba(0,0,0,0.85) 70%); }
+#result-card.tie  { background:rgba(50,40,5,0.88); }
+#result-card.tie  #result-head { color:var(--yellow); }
+#result-bg.tie    { background:radial-gradient(ellipse at center, rgba(161,120,0,0.5) 0%, rgba(0,0,0,0.85) 70%); }
 
-  #deal-btn {
-    background: var(--aldi-orange); color: #fff; border: none; outline: none;
-    font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;
-    padding: 8px 16px; border-radius: 20px; cursor: pointer;
-    box-shadow: 0 4px 16px rgba(255,102,0,0.4); transition: transform 0.1s, box-shadow 0.2s;
-  }
-  #deal-btn:active { transform: scale(0.96); }
+/* zoom */
+#zoom-modal { position:fixed; inset:0; z-index:150; background:rgba(0,0,0,0.92); display:none; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(8px); }
+#zoom-modal.open { display:flex; }
+#zoom-img { max-width:min(360px,90vw); max-height:85vh; border-radius:18px; box-shadow:0 0 60px rgba(255,102,0,0.3); animation:zoomIn 0.3s cubic-bezier(.17,.67,.35,1.3) forwards; }
+@keyframes zoomIn { from{transform:scale(0.7);opacity:0;} to{transform:scale(1);opacity:1;} }
+#zoom-close { position:absolute; top:20px; right:20px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 
-  /* ── MOD GRID ── */
-  #mod-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 5px; min-height: 110px; }
-  #mod-grid.remixing { animation: remixFlash 0.7s ease-in-out; }
-  @keyframes remixFlash {
-    0%   { opacity:1; transform:scale(1); filter:brightness(1); }
-    20%  { opacity:0; transform:scale(0.9); filter:brightness(4); }
-    50%  { opacity:1; transform:scale(1.05); filter:brightness(2.5); }
-    80%  { opacity:0.6; transform:scale(0.97); filter:brightness(1.5); }
-    100% { opacity:1; transform:scale(1); filter:brightness(1); }
-  }
-  .mod-cell { cursor: pointer; border-radius: 10px; position: relative; }
-  .mod-cell-inner {
-    width: 100%; height: 100%; min-height: 50px; background: var(--dark3);
-    border: 1.5px solid rgba(255,102,0,0.55); border-radius: 10px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 4px 3px; gap: 2px; transition: background 0.15s, border-color 0.15s;
-    position: relative; overflow: hidden;
-  }
-  .mod-cell:not(.used):active .mod-cell-inner { background: rgba(255,102,0,0.2); }
-  .mod-cell-icon { font-size: 15px; line-height: 1; }
-  .mod-cell-label { font-family: 'Barlow Condensed', sans-serif; font-size: 7.5px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.3px; text-align: center; line-height: 1.2; }
-  .mod-used-stamp {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.6); border-radius: 9px;
-    font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; color: #ef4444;
-    border: 2px solid #ef4444; transform: rotate(-18deg) scale(0);
-    transition: transform 0.3s cubic-bezier(.17,.67,.35,1.5); pointer-events: none;
-  }
-  .mod-cell.used .mod-used-stamp  { transform: rotate(-18deg) scale(1); }
-  .mod-cell.used .mod-cell-inner  { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); cursor: not-allowed; }
-  .mod-cell.used .mod-cell-label  { opacity: 0.25; }
-  .mod-cell.used .mod-cell-icon   { opacity: 0.25; }
+/* rules modal */
+#rules-modal { position:fixed; inset:0; z-index:160; background:rgba(0,0,0,0.88); display:none; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(10px); }
+#rules-modal.open { display:flex; }
+#rules-inner {
+  background:linear-gradient(160deg,#0f172a,#1e1b4b); border:2px solid rgba(255,102,0,0.4);
+  border-radius:22px; padding:24px 20px 20px; max-width:360px; width:100%;
+  max-height:88vh; overflow-y:auto; position:relative;
+  box-shadow:0 0 60px rgba(255,102,0,0.2);
+  animation:rulesIn 0.35s cubic-bezier(.17,.67,.35,1.3);
+}
+@keyframes rulesIn { from{transform:scale(0.85) translateY(20px);opacity:0;} to{transform:scale(1) translateY(0);opacity:1;} }
+#rules-close { position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.rules-h { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:4px; text-align:center; color:var(--orange); margin-bottom:14px; }
+.rules-step { display:flex; gap:10px; align-items:flex-start; margin-bottom:9px; }
+.rs-n { flex-shrink:0; width:20px; height:20px; border-radius:50%; background:var(--orange); font-family:'Bebas Neue',sans-serif; font-size:12px; display:flex; align-items:center; justify-content:center; color:#fff; }
+.rs-t { font-size:12px; color:rgba(255,255,255,0.8); line-height:1.5; }
+.rs-t b { color:#fff; } .rs-t em { color:var(--yellow); font-style:normal; }
+.rules-hr { border:none; border-top:1px solid rgba(255,255,255,0.07); margin:12px 0; }
+.rules-play-btn { width:100%; margin-top:14px; background:var(--orange); color:#fff; border:none; font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; padding:13px; border-radius:14px; cursor:pointer; }
 
-  /* ── TM CATEGORY HINT ── */
-  .tm-hint {
-    position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
-    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px;
-    opacity: 0; transition: opacity 0.4s 0.2s; pointer-events: none;
-    background: linear-gradient(135deg, #003DA5, #0055cc);
-    border-radius: 0 0 12px 12px; padding: 7px 8px;
-    border-top: 2px solid rgba(255,255,255,0.2);
-  }
-  .tm-hint-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
-  .tm-hint-txt { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); white-space: nowrap; }
-
-  /* ── SWAP AREA ── */
-  #swap-area { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 72px; }
-  #swap-label-top { font-family: 'Barlow Condensed', sans-serif; font-size: 8px; font-weight: 900; letter-spacing: 2px; color: var(--aldi-yellow); text-transform: uppercase; text-align: center; }
-  #swap-btn {
-    background: linear-gradient(135deg, #92400e, #d97706);
-    color: #fff; border: 2px solid var(--aldi-yellow); outline: none;
-    font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px;
-    padding: 10px 8px; border-radius: 10px; cursor: pointer; width: 100%;
-    box-shadow: 0 0 14px rgba(217,119,6,0.5); transition: opacity 0.2s;
-  }
-  #swap-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
-  #swap-count { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; color: var(--aldi-yellow); letter-spacing: 1px; text-align: center; }
-  #swap-hint { font-size: 8.5px; color: rgba(255,255,255,0.3); text-align: center; letter-spacing: 0.3px; font-style: italic; }
-
-  /* ── SWAP TOAST ── */
-  #swap-toast {
-    position: fixed; top: 50%; left: 50%; z-index: 160;
-    transform: translate(-50%, -50%) scale(0.85);
-    background: linear-gradient(135deg, rgba(146,64,14,0.95), rgba(217,119,6,0.95));
-    border: 2px solid var(--aldi-yellow); border-radius: 20px;
-    padding: 20px 28px; text-align: center; gap: 8px;
-    display: flex; flex-direction: column; align-items: center;
-    opacity: 0; pointer-events: none; box-shadow: 0 0 40px rgba(217,119,6,0.5);
-    backdrop-filter: blur(8px);
-  }
-  #swap-toast.show { transform: translate(-50%, -50%) scale(1); opacity: 1; transition: transform 0.3s cubic-bezier(.17,.67,.35,1.4), opacity 0.25s ease-out; }
-  #swap-toast.hiding { transform: translate(-50%, -50%) scale(0.85); opacity: 0; transition: transform 0.2s ease-in, opacity 0.2s ease-in; }
-  #swap-toast-icon { font-size: 44px; line-height: 1; }
-  #swap-toast-text { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: #fff; line-height: 1.3; }
-  #swap-toast-text span { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 1px; color: rgba(255,255,255,0.7); display: block; text-transform: uppercase; }
-
-  #rules-btn {
-    background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.2);
-    color: #fff; border-radius: 20px; height: 28px; padding: 0 12px;
-    font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-    text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; white-space: nowrap;
-    animation: rulesPulse 1.8s ease-in-out infinite;
-  }
-  @keyframes rulesPulse {
-    0%   { color: #ffffff; border-color: rgba(255,255,255,0.3); box-shadow: 0 0 0px rgba(255,20,147,0); }
-    50%  { color: #ff1493; border-color: #ff1493; box-shadow: 0 0 12px rgba(255,20,147,0.7), 0 0 24px rgba(255,20,147,0.3); }
-    100% { color: #ffffff; border-color: rgba(255,255,255,0.3); box-shadow: 0 0 0px rgba(255,20,147,0); }
-  }
-  #rules-btn:active { background: rgba(255,255,255,0.18); }
-
-  /* ── RULES MODAL ── */
-  #rules-modal { position: fixed; inset: 0; z-index: 160; background: rgba(0,0,0,0.88); display: none; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(10px); }
-  #rules-modal.open { display: flex; }
-  #rules-card-inner {
-    background: linear-gradient(160deg, #0f172a 0%, #1e1b4b 100%);
-    border: 2px solid rgba(255,102,0,0.4); border-radius: 22px; padding: 24px 20px 20px;
-    max-width: 360px; width: 100%; max-height: 88vh; overflow-y: auto; position: relative;
-    box-shadow: 0 0 60px rgba(255,102,0,0.2); animation: rulesIn 0.35s cubic-bezier(.17,.67,.35,1.3);
-  }
-  @keyframes rulesIn { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-  #rules-close-btn { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  #rules-logo-wrap { width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 10px; overflow: hidden; border: 2px solid var(--aldi-orange); display: flex; align-items: center; justify-content: center; background: #fff; }
-  #rules-logo-wrap img { width: 80%; object-fit: contain; }
-  #rules-heading { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 4px; text-align: center; color: var(--aldi-orange); margin-bottom: 16px; }
-  .rules-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 9px; }
-  .rs-num { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--aldi-orange); font-family: 'Bebas Neue', sans-serif; font-size: 13px; display: flex; align-items: center; justify-content: center; color: #fff; margin-top: 1px; }
-  .rs-txt { font-size: 12px; color: rgba(255,255,255,0.8); line-height: 1.5; }
-  .rs-txt b { color: #fff; }
-  .rs-txt em { color: var(--aldi-yellow); font-style: normal; }
-  .rules-divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 12px 0; }
-  #rules-swap-box { background: linear-gradient(135deg, rgba(146,64,14,0.35), rgba(251,191,36,0.12)); border: 1.5px solid rgba(251,191,36,0.4); border-radius: 14px; padding: 12px 14px; margin: 12px 0; }
-  #rules-swap-heading { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--aldi-yellow); margin-bottom: 6px; }
-  #rules-swap-body { font-size: 12px; color: rgba(255,255,255,0.8); line-height: 1.5; }
-  #rules-swap-body b { color: var(--aldi-yellow); }
-  #rules-mods-heading { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 2px; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
-  #rules-mods-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 8px; }
-  .rm-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 6px 8px; font-size: 11px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; color: rgba(255,255,255,0.75); }
-  #rules-remix-note { font-size: 10px; color: rgba(255,255,255,0.35); font-style: italic; text-align: center; margin-top: 4px; }
-  #rules-play-btn { width: 100%; margin-top: 16px; background: var(--aldi-orange); color: #fff; border: none; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; padding: 13px; border-radius: 14px; cursor: pointer; box-shadow: 0 4px 20px rgba(255,102,0,0.4); }
-  #rules-play-btn:active { transform: scale(0.97); }
-
-  /* make result overlay more dramatic */
-  #result-card { padding: 52px 36px !important; min-width: 300px !important; }
-  #result-emoji { font-size: 96px !important; }
-  #result-headline { font-size: 60px !important; letter-spacing: 5px !important; }
-  #result-detail { font-size: 17px !important; }
-
-  /* ── STATUS BAR ── */
-  #status { text-align: center; padding: 6px 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 1px; color: #ffffff; min-height: 28px; }
-
-  /* ── ROUND RESULT OVERLAY ── */
-  #result-overlay { position: fixed; inset: 0; z-index: 170; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
-  #result-overlay.show { pointer-events: all; opacity: 1; }
-  #result-overlay.hiding { opacity: 0; pointer-events: none; transition: opacity 0.3s ease-in; }
-  #result-bg { position: absolute; inset: 0; opacity: 0; transition: opacity 0.25s; }
-  #result-overlay.show #result-bg { opacity: 1; }
-  #result-card {
-    position: relative; z-index: 1; text-align: center; padding: 40px 32px;
-    border-radius: 24px; min-width: 280px; max-width: 340px;
-    transform: scale(0.5) rotateX(20deg); opacity: 0;
-    transition: transform 0.4s cubic-bezier(.17,.67,.35,1.4), opacity 0.3s;
-    border: 3px solid rgba(255,255,255,0.15); backdrop-filter: blur(20px);
-  }
-  #result-overlay.show #result-card { transform: scale(1) rotateX(0deg); opacity: 1; }
-  #result-overlay.hiding #result-card { transform: scale(1.1) rotateX(-10deg); opacity: 0; transition: transform 0.25s ease-in, opacity 0.25s ease-in; }
-  #result-overlay.hiding #result-bg { opacity: 0; }
-  #result-emoji { font-size: 72px; line-height: 1; margin-bottom: 12px; display: block; }
-  #result-headline { font-family: 'Bebas Neue', sans-serif; font-size: 44px; letter-spacing: 4px; line-height: 1; margin-bottom: 8px; }
-  #result-detail { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 16px; line-height: 1.4; }
-  #result-values { display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; }
-  .rv-box { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 8px 16px; min-width: 90px; }
-  .rv-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
-  .rv-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; line-height: 1; }
-  .rv-val.winner { color: var(--aldi-yellow); }
-  #result-card.win { background: rgba(5,90,10,0.85); }
-  #result-card.win #result-headline { color: #4ade80; }
-  #result-bg.win { background: radial-gradient(ellipse at center, rgba(22,163,74,0.6) 0%, rgba(0,0,0,0.85) 70%); }
-  #result-card.lose { background: rgba(90,5,5,0.85); }
-  #result-card.lose #result-headline { color: #f87171; }
-  #result-bg.lose { background: radial-gradient(ellipse at center, rgba(185,28,28,0.6) 0%, rgba(0,0,0,0.85) 70%); }
-  #result-card.tie { background: rgba(50,40,5,0.85); }
-  #result-card.tie #result-headline { color: var(--aldi-yellow); }
-  #result-bg.tie { background: radial-gradient(ellipse at center, rgba(161,120,0,0.5) 0%, rgba(0,0,0,0.85) 70%); }
-
-  /* ── ZOOM MODAL ── */
-  #zoom-modal { position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(8px); }
-  #zoom-modal.open { display: flex; }
-  #zoom-img { max-width: min(380px, 90vw); max-height: 85vh; border-radius: 18px; box-shadow: 0 0 60px rgba(255,102,0,0.3); animation: zoomIn 0.3s cubic-bezier(.17,.67,.35,1.3) forwards; }
-  @keyframes zoomIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  #zoom-close { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-  /* ── GAME OVER ── */
-  #gameover { display: none; position: fixed; inset: 0; z-index: 180; background: rgba(0,0,0,0.96); flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; backdrop-filter: blur(12px); }
-  #gameover.open { display: flex; }
-  #go-title-win, #go-title-lose { font-family: 'Bebas Neue', sans-serif; font-size: 56px; letter-spacing: 4px; }
-  #go-title-win  { color: #4ade80; }
-  #go-title-lose { color: #f87171; }
-  #go-sub-win, #go-sub-lose { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; color: rgba(255,255,255,0.6); }
-  #go-share-btn { background: linear-gradient(135deg, #ec4899, #f43f5e); color: #fff; border: none; outline: none; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; padding: 14px 32px; border-radius: 30px; cursor: pointer; width: 100%; max-width: 300px; box-shadow: 0 6px 24px rgba(244,63,94,0.5); animation: sharePulse 1.6s ease-in-out infinite; }
-  @keyframes sharePulse { 0%,100% { box-shadow: 0 6px 24px rgba(244,63,94,0.5); } 50% { box-shadow: 0 6px 36px rgba(244,63,94,0.9), 0 0 0 4px rgba(244,63,94,0.2); } }
-  #go-restart-win, #go-restart-lose { background: var(--aldi-orange); color: #fff; border: none; outline: none; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; padding: 12px 36px; border-radius: 30px; cursor: pointer; width: 100%; max-width: 300px; box-shadow: 0 4px 16px rgba(255,102,0,0.4); }
-  #go-tomorrow-btn { background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.2); color: #fff; outline: none; font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; padding: 12px 36px; border-radius: 30px; cursor: pointer; width: 100%; max-width: 300px; }
-  #go-tomorrow-note { font-size: 12px; color: rgba(255,255,255,0.3); font-family: 'Barlow', sans-serif; font-style: italic; max-width: 260px; }
-
-  /* dealing card animation */
-  .deal-anim { position: fixed; z-index: 90; pointer-events: none; width: 50px; height: 74px; background: var(--dark3); border: 2px solid var(--aldi-orange); border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.45s cubic-bezier(.25,1,.5,1); box-shadow: 0 4px 16px rgba(255,102,0,0.3); overflow: hidden; }
-  .deal-anim img { width: 80%; opacity: 0.7; object-fit: contain; }
-
-  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(255,102,0,0); } 50% { box-shadow: 0 0 0 6px rgba(255,102,0,0.35); } }
-  .card-slot.your-turn .card-inner { animation: pulseGlow 1.5s infinite; border-radius: 14px; }
-
-  /* Waiting on others overlay */
-  #waiting-overlay {
-    display: none; position: fixed; inset: 0; z-index: 155;
-    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
-    align-items: center; justify-content: center; flex-direction: column; gap: 16px;
-  }
-  #waiting-overlay.show { display: flex; }
-  #waiting-overlay-text { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 3px; color: rgba(255,255,255,0.7); text-align: center; }
-  #waiting-overlay-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 1px; color: rgba(255,255,255,0.4); text-align: center; }
+/* game over */
+#gameover { display:none; position:fixed; inset:0; z-index:180; background:rgba(0,0,0,0.96); flex-direction:column; align-items:center; justify-content:center; padding:32px; text-align:center; backdrop-filter:blur(12px); gap:14px; }
+#gameover.open { display:flex; }
+#go-emoji { font-size:80px; }
+#go-title { font-family:'Bebas Neue',sans-serif; font-size:54px; letter-spacing:4px; }
+#go-sub   { font-family:'Barlow Condensed',sans-serif; font-size:18px; color:rgba(255,255,255,0.55); }
+.go-btn { background:var(--orange); color:#fff; border:none; font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; padding:13px 36px; border-radius:30px; cursor:pointer; width:100%; max-width:300px; box-shadow:0 4px 16px rgba(255,102,0,0.4); }
+.go-btn.share { background:linear-gradient(135deg,#ec4899,#f43f5e); box-shadow:0 6px 24px rgba(244,63,94,0.5); animation:pulse-share 1.6s ease-in-out infinite; }
+@keyframes pulse-share { 0%,100%{box-shadow:0 6px 24px rgba(244,63,94,0.5);} 50%{box-shadow:0 6px 36px rgba(244,63,94,0.9),0 0 0 4px rgba(244,63,94,0.2);} }
 </style>
 </head>
 <body>
 
 <!-- SPLASH -->
 <div id="splash">
-  <div id="splash-logo-wrap">
-    <div id="splash-card">
-      <img src="logo.png" alt="TOP PROD" onerror="this.style.display='none'">
-    </div>
-  </div>
+  <div id="splash-card"><img src="logo.png" alt="TOP PROD" onerror="this.style.display='none'"></div>
   <div id="splash-title">TOP PROD</div>
-  <div id="splash-sub">Beat Today's Trolley Master</div>
+  <div id="splash-sub">Battle of the Brands</div>
 </div>
 
-<!-- ═══ LOBBY ═══ -->
+<!-- LOBBY -->
 <div id="lobby">
-  <div id="lobby-logo">
-    <img src="logo.png" alt="TOP PROD" onerror="this.style.display='none'">
-  </div>
+  <div class="lobby-logo"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
   <div id="lobby-title">TOP PROD</div>
   <div id="lobby-sub">Battle of the Brands</div>
 
-  <!-- Mode buttons -->
-  <div class="lobby-mode-row">
-    <div class="lobby-mode-btn active" id="mode-solo" onclick="setMode('solo')">
-      <span class="lmb-icon">🤖</span>
-      Solo vs TM
+  <div class="mode-row">
+    <div class="mode-btn active" id="mode-solo" onclick="setMode('solo')">
+      <span class="mi">🤖</span>Solo vs TM
     </div>
-    <div class="lobby-mode-btn" id="mode-multi" onclick="setMode('multi')">
-      <span class="lmb-icon">👥</span>
-      Live Table
+    <div class="mode-btn" id="mode-multi" onclick="setMode('multi')">
+      <span class="mi">👥</span>Live Table
     </div>
   </div>
 
   <!-- Solo panel -->
-  <div class="lobby-panel" id="solo-panel">
-    <div class="lobby-panel-title">SOLO GAME</div>
-    <input class="lobby-input" id="solo-name" type="text" maxlength="14" placeholder="Your name (optional)" autocomplete="off" spellcheck="false">
-    <button class="lobby-btn primary" onclick="startSolo()">DEAL ME IN</button>
+  <div class="panel" id="solo-panel">
+    <div class="panel-title">SOLO GAME</div>
+    <input class="inp" id="solo-name" type="text" maxlength="14" placeholder="Your name (optional)" autocomplete="off" spellcheck="false">
+    <button class="btn primary" onclick="startSolo()">DEAL ME IN</button>
   </div>
 
-  <!-- Multiplayer panel -->
-  <div class="lobby-panel" style="display:none" id="multi-panel">
-    <div class="lobby-panel-title">LIVE TABLE</div>
-    <input class="lobby-input" id="mp-name" type="text" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
-    <button class="lobby-btn primary" onclick="doCreateRoom()">🃏 CREATE ROOM</button>
-    <div class="lobby-divider"><hr><span>OR</span><hr></div>
-    <input class="lobby-input" id="join-code" type="text" maxlength="4" placeholder="Room code (e.g. MANGO)" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:6px;font-size:22px;text-align:center">
-    <button class="lobby-btn secondary" onclick="doJoinRoom()">JOIN ROOM</button>
-    <div class="lobby-error" id="lobby-error"></div>
+  <!-- Multi panel -->
+  <div class="panel" style="display:none" id="multi-panel">
+    <div class="panel-title">LIVE TABLE</div>
+    <input class="inp" id="mp-name" type="text" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
+    <button class="btn primary" onclick="doCreate()">🃏 CREATE ROOM</button>
+    <div class="divider"><hr><span>OR JOIN</span><hr></div>
+    <input class="inp code-inp" id="join-code" type="text" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+    <button class="btn ghost" onclick="doJoin()">JOIN ROOM</button>
+    <div class="err" id="lobby-err"></div>
   </div>
 </div>
 
-<!-- ═══ WAITING ROOM ═══ -->
+<!-- WAITING ROOM -->
 <div id="waiting">
-  <div id="lobby-logo" style="margin-bottom:8px">
-    <img src="logo.png" alt="" onerror="this.style.display='none'">
-  </div>
+  <div class="lobby-logo"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
   <div id="waiting-title">ROOM CODE</div>
-  <div id="room-code-display">----</div>
-  <div id="waiting-sub">Share this code with friends to join your table</div>
-  <div id="players-list"></div>
-  <div class="waiting-spinner" id="waiting-spinner"></div>
-  <button id="waiting-start-btn" onclick="hostStartGame()">🚀 START GAME</button>
-  <button id="waiting-leave-btn" onclick="leaveRoom()">← Leave</button>
+  <div id="room-code">----</div>
+  <div id="waiting-sub">Share this code with friends</div>
+  <div id="player-list"></div>
+  <div class="spinner" id="w-spinner" style="display:none"></div>
+  <button id="start-btn" onclick="hostStart()">🚀 START GAME</button>
+  <button id="leave-btn" onclick="leaveRoom()">← Leave</button>
 </div>
 
-<!-- ═══ LIVE TABLE BAR (shown during multiplayer game) ═══ -->
-<div id="live-bar">
-  <span><span id="live-dot"></span> LIVE TABLE: <span id="live-room-label"></span></span>
-  <span id="live-players-count"></span>
-</div>
-
-<!-- ═══ GAME ═══ -->
+<!-- GAME -->
 <div id="game">
 
-  <!-- Header -->
-  <div id="hdr">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div>
-        <div id="hdr-title">TOP PROD</div>
-        <div id="hdr-sub">Beat Today's Trolley Master</div>
+  <div id="top-bar">
+    <div>
+      <div id="top-bar-title">TOP PROD</div>
+      <div id="top-bar-sub" id="game-mode-sub">Solo vs Trolley Master</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="score-row" style="display:flex;gap:8px">
+        <div class="sb-chip" id="solo-you-chip">You <span class="sb-cards" id="s-player">-</span></div>
+        <div class="sb-chip" id="solo-tm-chip">TM <span class="sb-cards" id="s-comp">-</span></div>
       </div>
       <button id="rules-btn" onclick="openRules()">Rules</button>
     </div>
-    <div id="score-row">
-      <div class="score-pill">You <span id="s-player">-</span></div>
-      <div class="score-pill">TM <span id="s-comp">-</span></div>
-    </div>
   </div>
 
-  <!-- Multiplayer scoreboard (hidden in solo) -->
-  <div id="scoreboard-panel">
-    <div class="sb-title">🏆 Live Table Scores</div>
-    <div id="scoreboard-list"></div>
+  <!-- Live bar (multiplayer only) -->
+  <div id="live-bar" style="display:none">
+    <span><span id="live-dot"></span>LIVE · <span id="live-room"></span></span>
+    <span id="live-count"></span>
   </div>
+
+  <!-- Scoreboard (multiplayer only) -->
+  <div id="scoreboard" style="display:none"></div>
 
   <!-- Turn banner (multiplayer only) -->
-  <div id="turn-banner"></div>
+  <div id="turn-banner" style="display:none"></div>
 
   <!-- Status -->
   <div id="status">Tap DEAL to begin!</div>
 
-  <!-- TROLLEY MASTER ROW -->
-  <div class="player-row">
-    <div class="player-label tm-label">Trolley Master</div>
+  <!-- SOLO: TM row -->
+  <div id="tm-row" style="display:flex;align-items:center;gap:10px;padding:8px 0">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:2px;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);animation:glow-red 2s ease-in-out infinite" id="tm-label">Trolley Master</div>
     <div class="card-slot" id="comp-slot">
       <div class="card-inner" id="comp-inner">
-        <div class="card-face">
-          <img src="logo.png" alt="back" onerror="this.style.display='none'">
-          <div class="tm-hint" id="tm-hint"></div>
-        </div>
-        <div class="card-back-face" id="comp-face">
-          <div class="cf-header">
-            <img class="cf-logo" src="aldi.png" alt="">
-            <div class="cf-name" id="comp-cf-name">—</div>
-          </div>
-          <div class="cf-body">
-            <div class="cf-img-wrap"><img id="comp-cf-img" src="" alt=""></div>
-            <div class="cf-rows" id="comp-cf-rows"></div>
-          </div>
+        <div class="card-face"><img src="logo.png" alt="back" onerror="this.style.display='none'"><div class="tm-hint" id="tm-hint" style="position:absolute;bottom:0;left:0;right:0;opacity:0;transition:opacity 0.4s;background:linear-gradient(135deg,#003DA5,#0055cc);border-radius:0 0 12px 12px;padding:6px 8px;display:flex;align-items:center;justify-content:center;gap:5px;pointer-events:none;border-top:2px solid rgba(255,255,255,0.2)"></div></div>
+        <div class="card-back">
+          <div class="cf-hdr"><img class="cf-logo" src="aldi.png" alt=""><div class="cf-name" id="comp-cf-name">—</div></div>
+          <div class="cf-body"><div class="cf-img"><img id="comp-cf-img" src="" alt=""></div><div class="cf-rows" id="comp-cf-rows"></div></div>
           <div class="cf-price" id="comp-cf-price">—</div>
         </div>
       </div>
     </div>
-    <div class="stack-wrap">
-      <div class="stack-box"><span class="stack-count" id="comp-count">-</span></div>
-      <div class="stack-label">TM Stack</div>
+    <div class="my-stack">
+      <div class="stack-box"><span class="stack-n" id="comp-count">-</span></div>
+      <div class="stack-lbl">TM Stack</div>
     </div>
   </div>
+
+  <!-- MULTIPLAYER: opponents area -->
+  <div id="opponents" style="display:none"></div>
 
   <!-- MIDDLE -->
   <div id="middle">
     <div id="pile-wrap">
       <div id="pile-box">
-        <span id="pile-count">0</span>
-        <div id="pile-label">pile</div>
-        <div id="dealer-deck" onclick="startDeal()">
-          <img src="logo.png" alt="deck" onerror="this.style.display='none'">
-        </div>
+        <span id="pile-n">0</span>
+        <div id="pile-lbl">pile</div>
+        <div id="dealer-deck" onclick="startDeal()"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
       </div>
       <button id="deal-btn" onclick="startDeal()">DEAL</button>
     </div>
     <div id="mod-grid"></div>
     <div id="swap-area">
-      <div id="swap-label-top">YOUR POWER</div>
+      <div id="swap-top">YOUR POWER</div>
       <button id="swap-btn" disabled onclick="doSwap()">🔄 SWAP</button>
-      <div id="swap-count">2 swaps left</div>
+      <div id="swap-n">2 swaps left</div>
       <div id="swap-hint">Steal the better card!</div>
     </div>
   </div>
 
-  <!-- PLAYER ROW -->
-  <div class="player-row" style="flex-direction: row-reverse;">
-    <div class="player-label you-label" style="transform: rotate(0deg);">You</div>
+  <!-- MY CARD -->
+  <div id="my-card-area">
+    <div class="my-label" id="my-label">You</div>
     <div class="card-slot" id="player-slot">
       <div class="card-inner" id="player-inner">
-        <div class="card-face">
-          <img src="logo.png" alt="back" onerror="this.style.display='none'">
-        </div>
-        <div class="card-back-face" id="player-face">
-          <div class="cf-header">
-            <img class="cf-logo" src="aldi.png" alt="">
-            <div class="cf-name" id="player-cf-name">—</div>
-          </div>
-          <div class="cf-body">
-            <div class="cf-img-wrap"><img id="player-cf-img" src="" alt=""></div>
-            <div class="cf-rows" id="player-cf-rows"></div>
-          </div>
+        <div class="card-face"><img src="logo.png" alt="back" onerror="this.style.display='none'"></div>
+        <div class="card-back">
+          <div class="cf-hdr"><img class="cf-logo" src="aldi.png" alt=""><div class="cf-name" id="player-cf-name">—</div></div>
+          <div class="cf-body"><div class="cf-img"><img id="player-cf-img" src="" alt=""></div><div class="cf-rows" id="player-cf-rows"></div></div>
           <div class="cf-price" id="player-cf-price">—</div>
         </div>
       </div>
-      <button class="zoom-btn" onclick="openZoom('player')">🔍</button>
+      <button class="zoom-btn" onclick="openZoom()">🔍</button>
     </div>
-    <div class="stack-wrap">
-      <div class="stack-box"><span class="stack-count" id="player-count">-</span></div>
-      <div class="stack-label">Your Stack</div>
+    <div class="my-stack">
+      <div class="stack-box"><span class="stack-n" id="player-count">-</span></div>
+      <div class="stack-lbl" id="my-stack-lbl">Your Stack</div>
     </div>
   </div>
 
 </div><!-- /game -->
 
-<!-- WAITING ON OTHERS OVERLAY (multiplayer) -->
-<div id="waiting-overlay">
-  <div class="waiting-spinner"></div>
-  <div id="waiting-overlay-text">WAITING FOR OTHERS...</div>
-  <div id="waiting-overlay-sub"></div>
+<!-- SWAP TOAST -->
+<div id="swap-toast">
+  <span id="swap-toast-icon">🃏</span>
+  <div id="swap-toast-txt">Card swapped!</div>
 </div>
 
-<!-- ROUND RESULT OVERLAY -->
+<!-- ROUND RESULT -->
 <div id="result-overlay">
   <div id="result-bg"></div>
   <div id="result-card">
     <span id="result-emoji">⚡</span>
-    <div id="result-headline">YOU WIN</div>
-    <div id="result-detail">Your protein crushes theirs</div>
-    <div id="result-values">
-      <div class="rv-box">
-        <div class="rv-label">You</div>
-        <div class="rv-val winner" id="rv-player">23.9g</div>
-      </div>
-      <div class="rv-box">
-        <div class="rv-label">TM</div>
-        <div class="rv-val" id="rv-comp">6.3g</div>
-      </div>
-    </div>
+    <div id="result-head">YOU WIN</div>
+    <div id="result-detail"></div>
+    <div id="result-scores"></div>
   </div>
 </div>
 
-<!-- ZOOM MODAL -->
+<!-- ZOOM -->
 <div id="zoom-modal" onclick="closeZoom()">
   <div id="zoom-close" onclick="closeZoom()">✕</div>
-  <img id="zoom-img" src="" alt="Card zoom">
+  <img id="zoom-img" src="" alt="">
 </div>
 
-<!-- RULES MODAL -->
+<!-- RULES -->
 <div id="rules-modal" onclick="closeRules()">
-  <div id="rules-card-inner" onclick="event.stopPropagation()">
-    <div id="rules-close-btn" onclick="closeRules()">✕</div>
-    <div id="rules-logo-wrap"><img src="logo.png" alt="TOP PROD" onerror="this.style.display='none'"></div>
-    <div id="rules-heading">HOW TO PLAY</div>
-    <div class="rules-step"><span class="rs-num">1</span><span class="rs-txt">To win you must reduce the <b>Trolley Master's stack to 0!</b> You and the Trolley Master each get <b>5 cards</b> from 77 real Aldi products.</span></div>
-    <div class="rules-step"><span class="rs-num">2</span><span class="rs-txt"><b>Everyone plays the same cards each day</b> — shuffled fresh at midnight Brisbane time 🌏. Come back tomorrow for a new battle!</span></div>
-    <div class="rules-step"><span class="rs-num">3</span><span class="rs-txt">Your card flips face-up. Study your product's nutrition stats and price.</span></div>
-    <div class="rules-step"><span class="rs-num">4</span><span class="rs-txt">You can see all <b>8 battle rules</b> — pick one strategically. e.g. <em>💪 Highest Protein</em> or <em>💰 Lowest Price</em>. That rule decides the winner.</span></div>
-    <div class="rules-step"><span class="rs-num">5</span><span class="rs-txt">The Trolley Master's card flips. Whoever wins the chosen stat takes both cards.</span></div>
-    <div class="rules-step"><span class="rs-num">6</span><span class="rs-txt">Each rule gets a red <b>USED</b> stamp once played — you can't pick it again. Choose carefully!</span></div>
-    <div class="rules-step"><span class="rs-num">7</span><span class="rs-txt">After all 8 rules are used, they <b>remix</b> with opposite directions — Highest becomes Lowest and vice versa. First to drain the other's deck wins.</span></div>
-    <hr class="rules-divider">
-    <div id="rules-swap-box">
-      <div id="rules-swap-heading">🤝 TIES</div>
-      <div id="rules-swap-body">If both products score the same, both cards go to the <b>central pile</b>. The winner of the next round takes them all!</div>
-    </div>
-    <hr class="rules-divider">
-    <div id="rules-swap-box" style="margin-top:0">
-      <div id="rules-swap-heading">🔄 YOUR SWAP POWER</div>
-      <div id="rules-swap-body">Before picking a rule, you can <b>SWAP</b> your card with the Trolley Master's. Think theirs looks better? <b>Steal it.</b> You get <b>2 swaps per game</b> — use them wisely.</div>
-    </div>
-    <hr class="rules-divider">
-    <div id="rules-mods-heading">THE 8 STARTING RULES</div>
-    <div id="rules-mods-grid">
-      <div class="rm-item">💪 Highest Protein</div><div class="rm-item">🚫 Lowest Sugar</div>
-      <div class="rm-item">🌿 Highest Fibre</div><div class="rm-item">🧂 Lowest Sodium</div>
-      <div class="rm-item">🥗 Lowest Fat</div><div class="rm-item">⚡ Highest Energy</div>
-      <div class="rm-item">💰 Lowest Price</div><div class="rm-item">🍞 Highest Carbs</div>
-    </div>
-    <div id="rules-remix-note">After all 8 are used they flip to opposites — Highest ↔ Lowest!</div>
-    <button id="rules-play-btn" onclick="closeRules()">GOT IT — LET'S PLAY!</button>
+  <div id="rules-inner" onclick="event.stopPropagation()">
+    <div id="rules-close" onclick="closeRules()">✕</div>
+    <div class="rules-h">HOW TO PLAY</div>
+    <div class="rules-step"><span class="rs-n">1</span><span class="rs-t">Each player gets <b>5 cards</b> from 77 real Aldi products — the same daily shuffle for everyone.</span></div>
+    <div class="rules-step"><span class="rs-n">2</span><span class="rs-t">Your card flips face-up. Study your product's nutrition stats and price.</span></div>
+    <div class="rules-step"><span class="rs-n">3</span><span class="rs-t"><b>Solo:</b> Pick one of the 8 battle rules to play your card against the Trolley Master. <b>Live Table:</b> The active player picks the rule for that round — everyone battles at once!</span></div>
+    <div class="rules-step"><span class="rs-n">4</span><span class="rs-t">Best stat wins <b>everyone's</b> card that round. Ties? Cards go to the pile — next winner takes them all.</span></div>
+    <div class="rules-step"><span class="rs-n">5</span><span class="rs-t">Rules get a <b>USED</b> stamp once played. After all 8 are used they <b>remix</b> with opposite directions.</span></div>
+    <div class="rules-step"><span class="rs-n">6</span><span class="rs-t"><b>Solo:</b> First to empty the other's deck wins. <b>Live Table:</b> Last player with cards wins!</span></div>
+    <div class="rules-hr">
+    <div class="rules-step" style="margin-top:12px"><span class="rs-n">🔄</span><span class="rs-t"><b>SWAP POWER</b> — Before picking a rule, swap your card with the Trolley Master's (solo only). 2 per game.</span></div>
+    <button class="rules-play-btn" onclick="closeRules()">GOT IT — LET'S PLAY!</button>
   </div>
-</div>
-
-<!-- SWAP TOAST -->
-<div id="swap-toast">
-  <span id="swap-toast-icon">🃏</span>
-  <div id="swap-toast-text">You stole their card!<br><span>Now pick your stat wisely</span></div>
 </div>
 
 <!-- GAME OVER -->
 <div id="gameover">
-  <div id="go-win" style="display:none; flex-direction:column; align-items:center; gap:14px; text-align:center;">
-    <div id="go-emoji-win" style="font-size:80px;">🏆</div>
-    <div id="go-title-win">CHAMPION!</div>
-    <div id="go-sub-win">You emptied the Trolley Master's cart!</div>
-    <button id="go-share-btn" onclick="doShare()">📣 Share Your Win</button>
-    <button id="go-restart-win" onclick="restartGame()">PLAY AGAIN</button>
-  </div>
-  <div id="go-lose" style="display:none; flex-direction:column; align-items:center; gap:14px; text-align:center;">
-    <div style="font-size:80px;">🛒</div>
-    <div id="go-title-lose">TROLLED!</div>
-    <div id="go-sub-lose">The Trolley Master cleaned you out.</div>
-    <button id="go-restart-lose" onclick="restartGame()">PLAY AGAIN</button>
-    <button id="go-tomorrow-btn" onclick="doTomorrow()">🗓️ Play Tomorrow</button>
-    <div id="go-tomorrow-note">A fresh shuffle awaits — new cards, new battle.</div>
-  </div>
+  <div id="go-emoji">🏆</div>
+  <div id="go-title">CHAMPION!</div>
+  <div id="go-sub"></div>
+  <button class="go-btn share" onclick="doShare()">📣 Share Result</button>
+  <button class="go-btn" onclick="restartGame()">PLAY AGAIN</button>
 </div>
 
+<style>
+@keyframes glow-red {
+  0%,100%{color:#ff4444;text-shadow:0 0 6px rgba(255,50,50,0.4);}
+  50%{color:#ff9999;text-shadow:0 0 16px rgba(255,50,50,1);}
+}
+</style>
+
 <script>
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 //  FIREBASE CONFIG
-//  !! REPLACE these values with your own Firebase project !!
-//  Free to create at: https://console.firebase.google.com
-// ══════════════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
+// ══════════════════════════════════════════════════════
+firebase.initializeApp({
   apiKey:            "AIzaSyBDXG98imnnOUwywE_NZXAf78qB5kWP3oY",
   authDomain:        "top-prod-266c8.firebaseapp.com",
   databaseURL:       "https://top-prod-266c8-default-rtdb.firebaseio.com",
@@ -972,78 +790,12 @@ const FIREBASE_CONFIG = {
   storageBucket:     "top-prod-266c8.firebasestorage.app",
   messagingSenderId: "592461791957",
   appId:             "1:592461791957:web:ac0df8477fb97a3c59185c"
-};
+});
+const db = firebase.database();
 
-// Detect if Firebase is configured yet
-const FIREBASE_READY = FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY";
-
-let db = null;
-if (FIREBASE_READY) {
-  firebase.initializeApp(FIREBASE_CONFIG);
-  db = firebase.database();
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  MULTIPLAYER STATE
-// ══════════════════════════════════════════════════════════════════════
-let isMultiplayer  = false;
-let myRoomCode     = null;
-let myPlayerId     = null;  // random UID for this browser session
-let myPlayerName   = 'Player';
-let amHost         = false;
-let roomRef        = null;
-let roomListener   = null;
-let mpPlayerCount  = 1;
-let mpPlayers      = {};   // { pid: { name, score, ready } }
-let mpTurnOrder    = [];   // array of pids, first is current turn
-let myTurnIndex    = 0;
-let isMyTurn       = false;
-let mpRoundPick    = null; // the mod chosen this round (set by active player)
-let mpRoundDealt   = false;
-let mpScores       = {};   // pid -> cards won count
-
-// ══════════════════════════════════════════════════════════════════════
-//  SOUND ENGINE (unchanged from solo)
-// ══════════════════════════════════════════════════════════════════════
-let audioCtx = null;
-function getCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-function masterGain(ctx, vol) { const g = ctx.createGain(); g.gain.value = vol; g.connect(ctx.destination); return g; }
-
-function sfxCardSwish(delay = 0) {
-  try { const ctx=getCtx(),t=ctx.currentTime+delay,buf=ctx.createBuffer(1,ctx.sampleRate*0.18,ctx.sampleRate),data=buf.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1); const src=ctx.createBufferSource(); src.buffer=buf; const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.setValueAtTime(3200,t); bp.frequency.exponentialRampToValueAtTime(900,t+0.15); bp.Q.value=1.2; const env=ctx.createGain(); env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(0.35,t+0.02); env.gain.exponentialRampToValueAtTime(0.001,t+0.18); src.connect(bp);bp.connect(env);env.connect(ctx.destination); src.start(t);src.stop(t+0.2); } catch(e) {}
-}
-function sfxCardFlip() {
-  try { const ctx=getCtx(),t=ctx.currentTime,osc=ctx.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(280,t); osc.frequency.exponentialRampToValueAtTime(60,t+0.09); const env=ctx.createGain(); env.gain.setValueAtTime(0.5,t); env.gain.exponentialRampToValueAtTime(0.001,t+0.12); osc.connect(env);env.connect(ctx.destination);osc.start(t);osc.stop(t+0.13); const buf=ctx.createBuffer(1,ctx.sampleRate*0.04,ctx.sampleRate),d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); const ns=ctx.createBufferSource();ns.buffer=buf;const ng=ctx.createGain();ng.gain.value=0.25;ns.connect(ng);ng.connect(ctx.destination);ns.start(t); } catch(e) {}
-}
-function sfxBoxReveal() {
-  try { const ctx=getCtx(),t=ctx.currentTime; [0,0.05,0.1].forEach((d,i)=>{const o=ctx.createOscillator();o.type='square';o.frequency.value=440+i*220;const g=ctx.createGain();g.gain.setValueAtTime(0.15,t+d);g.gain.exponentialRampToValueAtTime(0.001,t+d+0.08);o.connect(g);g.connect(ctx.destination);o.start(t+d);o.stop(t+d+0.09);}); } catch(e) {}
-}
-function sfxRoundWin() {
-  try { const ctx=getCtx(),notes=[523.25,659.25,783.99,1046.5]; notes.forEach((freq,i)=>{const t=ctx.currentTime+i*0.1,o=ctx.createOscillator();o.type='sine';o.frequency.value=freq;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.4,t+0.03);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);const o2=ctx.createOscillator();o2.type='sine';o2.frequency.value=freq*2;const g2=ctx.createGain();g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(0.12,t+0.02);g2.gain.exponentialRampToValueAtTime(0.001,t+0.3);o.connect(g);g.connect(ctx.destination);o2.connect(g2);g2.connect(ctx.destination);o.start(t);o.stop(t+0.45);o2.start(t);o2.stop(t+0.35);}); } catch(e) {}
-}
-function sfxRoundLose() {
-  try { const ctx=getCtx(),t=ctx.currentTime,o=ctx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(320,t);o.frequency.exponentialRampToValueAtTime(120,t+0.45);const wah=ctx.createBiquadFilter();wah.type='bandpass';wah.frequency.setValueAtTime(800,t);wah.frequency.exponentialRampToValueAtTime(200,t+0.45);wah.Q.value=4;const env=ctx.createGain();env.gain.setValueAtTime(0.35,t);env.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(wah);wah.connect(env);env.connect(ctx.destination);o.start(t);o.stop(t+0.55); } catch(e) {}
-}
-function sfxTie() {
-  try { const ctx=getCtx(); [0,0.18].forEach((d)=>{const t=ctx.currentTime+d,o=ctx.createOscillator();o.type='sine';o.frequency.value=350;const g=ctx.createGain();g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.15);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.16);}); } catch(e) {}
-}
-function sfxJackpot() {
-  try { const ctx=getCtx(),mg=masterGain(ctx,0.7); for(let i=0;i<18;i++){const t=ctx.currentTime+0.05+i*0.12,buf=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate),d=buf.getChannelData(0); for(let j=0;j<d.length;j++) d[j]=(Math.random()*2-1); const s=ctx.createBufferSource();s.buffer=buf;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2000+Math.random()*2000;bp.Q.value=8;const g=ctx.createGain();g.gain.setValueAtTime(0.6,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.06);s.connect(bp);bp.connect(g);g.connect(mg);s.start(t);s.stop(t+0.07);} const melody=[[523.25,0],[659.25,0.15],[783.99,0.30],[1046.5,0.45],[987.77,0.65],[1046.5,0.80],[1174.66,0.95],[1318.51,1.10]]; melody.forEach(([freq,delay])=>{const t=ctx.currentTime+delay,o=ctx.createOscillator();o.type='triangle';o.frequency.value=freq;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.5,t+0.04);g.gain.exponentialRampToValueAtTime(0.001,t+0.35);const o2=ctx.createOscillator();o2.type='sine';o2.frequency.value=freq*1.5;const g2=ctx.createGain();g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(0.18,t+0.04);g2.gain.exponentialRampToValueAtTime(0.001,t+0.28);o.connect(g);g.connect(mg);o2.connect(g2);g2.connect(mg);o.start(t);o.stop(t+0.38);o2.start(t);o2.stop(t+0.3);}); [523.25,659.25,783.99,1046.5,1318.51].forEach((freq,i)=>{const t=ctx.currentTime+1.35,o=ctx.createOscillator();o.type=i%2===0?'triangle':'sine';o.frequency.value=freq;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.4,t+0.06);g.gain.exponentialRampToValueAtTime(0.001,t+1.2);o.connect(g);g.connect(mg);o.start(t);o.stop(t+1.3);}); } catch(e) {}
-}
-function sfxGameLose() {
-  try { const ctx=getCtx(),notes=[392,329.63,261.63,196]; notes.forEach((freq,i)=>{const t=ctx.currentTime+i*0.18,o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=freq;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=800;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.35,t+0.04);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(lp);lp.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.55);}); } catch(e) {}
-}
-function sfxSwap() {
-  try { const ctx=getCtx(),t=ctx.currentTime,buf=ctx.createBuffer(1,ctx.sampleRate*0.25,ctx.sampleRate),d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1); const s=ctx.createBufferSource();s.buffer=buf;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.setValueAtTime(200,t);hp.frequency.exponentialRampToValueAtTime(4000,t+0.2);const g=ctx.createGain();g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.25);s.connect(hp);hp.connect(g);g.connect(ctx.destination);s.start(t);s.stop(t+0.26); const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(400,t+0.1);o.frequency.exponentialRampToValueAtTime(900,t+0.28);const og=ctx.createGain();og.gain.setValueAtTime(0.3,t+0.1);og.gain.exponentialRampToValueAtTime(0.001,t+0.32);o.connect(og);og.connect(ctx.destination);o.start(t+0.1);o.stop(t+0.33); } catch(e) {}
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  PRODUCTS DATABASE (unchanged)
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+//  PRODUCTS
+// ══════════════════════════════════════════════════════
 const ALL_PRODUCTS = [
   { name:"Goldenvale Just Bran", img:"products/cereal/Goldenvalejustbran1.png", energy_kj:1260, protein:11.8, fat:2.4, saturated_fat:0.5, carbohydrate:39.9, sugars:17.6, dietary_fibre:35.7, sodium:388, price:2.99 },
   { name:"Hillcrest Corn Flakes", img:"products/cereal/Hillcrestcornflakes1.png", energy_kj:1600, protein:6.9, fat:0.7, saturated_fat:0.3, carbohydrate:84.0, sugars:5.9, dietary_fibre:3.6, sodium:266, price:3.89 },
@@ -1081,872 +833,784 @@ const ALL_PRODUCTS = [
   { name:"Lyttos Low Fat Natural Yoghurt", img:"products/yoghurt/Lyttoslowfatnaturayoghurt1.png", energy_kj:230, protein:5.7, fat:0.2, saturated_fat:0.1, carbohydrate:6.7, sugars:6.7, dietary_fibre:0.0, sodium:66, price:2.99 },
   { name:"Remano Spaghetti 500g", img:"products/rice pasta/Remanospagetti500g1.png", energy_kj:1490, protein:12.5, fat:1.8, saturated_fat:0.3, carbohydrate:68.5, sugars:3.0, dietary_fibre:2.9, sodium:5, price:1.29 },
   { name:"Remano Penne 500g", img:"products/rice pasta/Remanopenne500g1.png", energy_kj:1490, protein:12.5, fat:1.8, saturated_fat:0.3, carbohydrate:68.5, sugars:3.0, dietary_fibre:2.9, sodium:5, price:1.29 },
-  { name:"Remano Fusilli 500g", img:"products/rice pasta/Remanofusilli500g1.png", energy_kj:1490, protein:12.5, fat:1.8, saturated_fat:0.3, carbohydrate:68.5, sugars:3.0, dietary_fibre:2.9, sodium:5, price:1.29 },
   { name:"Remano Basmati Rice 1kg", img:"products/rice pasta/Remanobasmatiri1kg1.png", energy_kj:1490, protein:8.0, fat:0.5, saturated_fat:0.1, carbohydrate:77.0, sugars:0.0, dietary_fibre:1.3, sodium:5, price:2.49 },
-  { name:"Worldwide Foods Jasmine Rice 5kg", img:"products/rice pasta/Worldwidefoodsjasmine5kg1.png", energy_kj:1490, protein:7.3, fat:0.5, saturated_fat:0.1, carbohydrate:79.3, sugars:0.0, dietary_fibre:0.5, sodium:1, price:8.99 },
   { name:"Keri Apple Juice 2L", img:"products/juices cordials/Keriapplejuice2l1.png", energy_kj:200, protein:0.2, fat:0.1, saturated_fat:0.0, carbohydrate:11.5, sugars:11.3, dietary_fibre:0.0, sodium:8, price:3.79 },
   { name:"Keri Orange Juice 2L", img:"products/juices cordials/Keriorangejuice2l1.png", energy_kj:175, protein:0.7, fat:0.2, saturated_fat:0.0, carbohydrate:9.3, sugars:8.3, dietary_fibre:0.3, sodium:2, price:3.79 },
   { name:"Keri Cloudy Apple Juice 2L", img:"products/juices cordials/Kericloudyapplejuice2l1.png", energy_kj:200, protein:0.2, fat:0.1, saturated_fat:0.0, carbohydrate:11.5, sugars:11.3, dietary_fibre:0.0, sodium:8, price:3.99 },
-  { name:"Keri Tropical Juice 2L", img:"products/juices cordials/Keritropic2l1.png", energy_kj:195, protein:0.4, fat:0.1, saturated_fat:0.0, carbohydrate:11.1, sugars:11.0, dietary_fibre:0.2, sodium:7, price:3.79 },
-  { name:"Nature's Finest Raspberry Lemon Cordial", img:"products/juices cordials/Naturesfinestcordialraspberrylemon1.png", energy_kj:200, protein:0.0, fat:0.0, saturated_fat:0.0, carbohydrate:12.0, sugars:11.8, dietary_fibre:0.0, sodium:20, price:2.99 },
-  { name:"Harvest Morn Muesli Bars Choc Chip", img:"products/biscuits/Harvestmornmueslibarchocchip1.png", energy_kj:1610, protein:5.1, fat:12.9, saturated_fat:5.3, carbohydrate:58.3, sugars:28.3, dietary_fibre:4.9, sodium:160, price:3.49 },
-  { name:"Emco Bircher Muesli", img:"products/cereal/Emcobirchermuesli1.png", energy_kj:1540, protein:10.2, fat:9.5, saturated_fat:1.4, carbohydrate:56.5, sugars:18.1, dietary_fibre:9.4, sodium:20, price:5.49 },
-  { name:"Remano Risotto Rice 500g", img:"products/rice pasta/Remanorisottorice500g1.png", energy_kj:1480, protein:7.0, fat:0.8, saturated_fat:0.2, carbohydrate:76.8, sugars:0.2, dietary_fibre:0.4, sodium:5, price:2.49 },
-  { name:"Remano Tomato Passata", img:"products/sauces/Remanottomatopassata1.png", energy_kj:115, protein:1.6, fat:0.3, saturated_fat:0.0, carbohydrate:4.1, sugars:4.1, dietary_fibre:1.4, sodium:250, price:1.49 },
-  { name:"Remano Bolognese Sauce", img:"products/sauces/Remanobolognesesauce1.png", energy_kj:285, protein:3.7, fat:4.1, saturated_fat:1.2, carbohydrate:9.1, sugars:7.1, dietary_fibre:1.7, sodium:430, price:2.29 },
-  { name:"Remano Arrabbiata Sauce", img:"products/sauces/Remanoarrabbiatasauce1.png", energy_kj:185, protein:1.7, fat:2.2, saturated_fat:0.3, carbohydrate:6.1, sugars:5.7, dietary_fibre:1.2, sodium:440, price:2.29 },
   { name:"Sweetway Strawberry Jam", img:"products/spreads/Sweetwaystrawberryjam1.png", energy_kj:1120, protein:0.4, fat:0.1, saturated_fat:0.0, carbohydrate:64.2, sugars:62.6, dietary_fibre:0.7, sodium:23, price:2.49 },
-  { name:"Sweetway Apricot Jam", img:"products/spreads/Sweetwayapricotjam1.png", energy_kj:1090, protein:0.4, fat:0.1, saturated_fat:0.0, carbohydrate:61.8, sugars:60.0, dietary_fibre:0.8, sodium:25, price:2.49 },
-  { name:"Beautifully Butterfully Spreadable", img:"products/spreads/Beautifullybutterfully1.png", energy_kj:2980, protein:0.5, fat:80.0, saturated_fat:52.5, carbohydrate:0.6, sugars:0.6, dietary_fibre:0.0, sodium:450, price:4.49 },
   { name:"Peanut Butter Smooth", img:"products/spreads/Peanutbuttersmooth1.png", energy_kj:2460, protein:26.0, fat:52.9, saturated_fat:9.3, carbohydrate:11.1, sugars:5.6, dietary_fibre:7.4, sodium:360, price:3.49 },
   { name:"Peanut Butter Crunchy", img:"products/spreads/Peanutbuttercrunchy1.png", energy_kj:2460, protein:26.0, fat:52.5, saturated_fat:9.2, carbohydrate:11.5, sugars:5.8, dietary_fibre:7.3, sodium:360, price:3.49 },
   { name:"Lyttos Hummus", img:"products/spreads/Lyttoshummus1.png", energy_kj:885, protein:5.8, fat:16.4, saturated_fat:2.0, carbohydrate:5.1, sugars:0.8, dietary_fibre:3.5, sodium:345, price:2.99 },
   { name:"Freezer Queen Mixed Veg", img:"products/frozen/Freezerqueenmixedveg1.png", energy_kj:185, protein:3.6, fat:0.3, saturated_fat:0.1, carbohydrate:6.5, sugars:3.5, dietary_fibre:4.7, sodium:25, price:3.49 },
   { name:"Freezer Queen Peas 1kg", img:"products/frozen/Freezerqueenpeas1kg1.png", energy_kj:290, protein:6.9, fat:0.4, saturated_fat:0.1, carbohydrate:9.2, sugars:4.3, dietary_fibre:8.0, sodium:5, price:3.49 },
-  { name:"Freezer Queen Corn Cobs 4pk", img:"products/frozen/Freezerqueencorncobs4pk1.png", energy_kj:380, protein:3.2, fat:1.5, saturated_fat:0.3, carbohydrate:16.4, sugars:5.5, dietary_fibre:2.8, sodium:1, price:3.99 },
-  { name:"Freezer Queen Hash Browns", img:"products/frozen/Freezerqueenhashbrown1.png", energy_kj:880, protein:2.1, fat:8.6, saturated_fat:2.9, carbohydrate:28.6, sugars:0.4, dietary_fibre:2.2, sodium:510, price:3.79 },
   { name:"Chef's Larder Chicken Nuggets 1kg", img:"products/frozen/Chefslardernuggets1kg1.png", energy_kj:1040, protein:14.5, fat:14.0, saturated_fat:2.9, carbohydrate:22.0, sugars:0.3, dietary_fibre:0.8, sodium:650, price:7.99 },
-  { name:"Chef's Larder Fish Fillets", img:"products/frozen/Chefslarderfishfillets1.png", energy_kj:850, protein:14.5, fat:8.3, saturated_fat:1.0, carbohydrate:13.0, sugars:0.3, dietary_fibre:0.8, sodium:420, price:6.99 },
   { name:"Monarc Vanilla Ice Cream 2L", img:"products/icecreams/Monarcvanillaicecream2l1.png", energy_kj:755, protein:3.3, fat:7.6, saturated_fat:5.1, carbohydrate:21.5, sugars:18.2, dietary_fibre:0.3, sodium:60, price:4.49 },
   { name:"Monarc Chocolate Ice Cream 2L", img:"products/icecreams/Monarcchocolateicecream2l1.png", energy_kj:810, protein:3.7, fat:8.4, saturated_fat:5.5, carbohydrate:23.2, sugars:19.8, dietary_fibre:1.0, sodium:65, price:4.49 },
-  { name:"Monarc Neapolitan Ice Cream 2L", img:"products/icecreams/Monarcneapolitanicecream2l1.png", energy_kj:755, protein:3.1, fat:7.5, saturated_fat:5.0, carbohydrate:21.7, sugars:18.5, dietary_fibre:0.3, sodium:58, price:4.49 },
   { name:"Milfina Icy Poles Rainbow 10pk", img:"products/icecreams/Milfinaipolyrainbow10pk1.png", energy_kj:130, protein:0.1, fat:0.0, saturated_fat:0.0, carbohydrate:7.5, sugars:6.5, dietary_fibre:0.0, sodium:8, price:3.49 },
   { name:"Milfina Chocolate Drumsticks 4pk", img:"products/icecreams/Milfinachocolatedrumstick4pk1.png", energy_kj:1165, protein:3.9, fat:13.5, saturated_fat:9.7, carbohydrate:34.0, sugars:24.8, dietary_fibre:0.7, sodium:68, price:4.99 },
-  { name:"Milfina Jelli Pop", img:"products/icecreams/Milfinajellipop6pack450ml.png", energy_kj:980, protein:2.2, fat:9.5, saturated_fat:7.8, carbohydrate:34.5, sugars:28.1, dietary_fibre:0.3, sodium:52, price:4.99 },
-  { name:"Monarc Spider Stix", img:"products/icecreams/Monarcspiderstixvariety750ml.png", energy_kj:615, protein:1.5, fat:3.1, saturated_fat:2.4, carbohydrate:28.5, sugars:24.3, dietary_fibre:0.2, sodium:48, price:4.99 },
   { name:"Monarc Crowns Vanilla Cones", img:"products/icecreams/Monarccrownsclassicvanillacones475ml.png", energy_kj:1220, protein:4.2, fat:14.7, saturated_fat:11.2, carbohydrate:32.6, sugars:24.5, dietary_fibre:1.2, sodium:65, price:3.39 },
-  { name:"Milfina Polar Bars Cookies & Cream", img:"products/icecreams/Milfinapolarbarscookiescream440ml.png", energy_kj:1189, protein:4.1, fat:10.3, saturated_fat:6.9, carbohydrate:43.8, sugars:23.9, dietary_fibre:1.2, sodium:189, price:3.59 },
 ];
 
-// ══════════════════════════════════════════════════════════════════════
-//  MODIFIER SETS (unchanged)
-// ══════════════════════════════════════════════════════════════════════
 const MOD_SET_A = [
-  { id:"protein",       label:"Highest Protein",  icon:"💪", type:"high", unit:"g" },
-  { id:"sugars",        label:"Lowest Sugar",      icon:"🚫", type:"low",  unit:"g" },
-  { id:"dietary_fibre", label:"Highest Fibre",     icon:"🌿", type:"high", unit:"g" },
-  { id:"sodium",        label:"Lowest Sodium",     icon:"🧂", type:"low",  unit:"mg"},
-  { id:"fat",           label:"Lowest Fat",        icon:"🥗", type:"low",  unit:"g" },
-  { id:"energy_kj",     label:"Highest Energy",    icon:"⚡", type:"high", unit:"kJ"},
-  { id:"price",         label:"Lowest Price",      icon:"💰", type:"low",  unit:"$" },
-  { id:"carbohydrate",  label:"Highest Carbs",     icon:"🍞", type:"high", unit:"g" },
+  { id:"protein",       label:"Highest Protein",  icon:"💪", type:"high", unit:"g"  },
+  { id:"sugars",        label:"Lowest Sugar",      icon:"🚫", type:"low",  unit:"g"  },
+  { id:"dietary_fibre", label:"Highest Fibre",     icon:"🌿", type:"high", unit:"g"  },
+  { id:"sodium",        label:"Lowest Sodium",     icon:"🧂", type:"low",  unit:"mg" },
+  { id:"fat",           label:"Lowest Fat",        icon:"🥗", type:"low",  unit:"g"  },
+  { id:"energy_kj",     label:"Highest Energy",    icon:"⚡", type:"high", unit:"kJ" },
+  { id:"price",         label:"Lowest Price",      icon:"💰", type:"low",  unit:"$"  },
+  { id:"carbohydrate",  label:"Highest Carbs",     icon:"🍞", type:"high", unit:"g"  },
 ];
 const MOD_SET_B = [
-  { id:"protein",       label:"Lowest Protein",   icon:"🤏", type:"low",  unit:"g" },
-  { id:"sugars",        label:"Highest Sugar",    icon:"🍬", type:"high", unit:"g" },
-  { id:"dietary_fibre", label:"Lowest Fibre",     icon:"🌾", type:"low",  unit:"g" },
-  { id:"sodium",        label:"Highest Sodium",   icon:"🧂", type:"high", unit:"mg"},
-  { id:"fat",           label:"Highest Fat",      icon:"🧈", type:"high", unit:"g" },
-  { id:"energy_kj",     label:"Lowest Energy",    icon:"😴", type:"low",  unit:"kJ"},
-  { id:"price",         label:"Highest Price",    icon:"💎", type:"high", unit:"$" },
-  { id:"carbohydrate",  label:"Lowest Carbs",     icon:"🥦", type:"low",  unit:"g" },
+  { id:"protein",       label:"Lowest Protein",   icon:"🤏", type:"low",  unit:"g"  },
+  { id:"sugars",        label:"Highest Sugar",    icon:"🍬", type:"high", unit:"g"  },
+  { id:"dietary_fibre", label:"Lowest Fibre",     icon:"🌾", type:"low",  unit:"g"  },
+  { id:"sodium",        label:"Highest Sodium",   icon:"🧂", type:"high", unit:"mg" },
+  { id:"fat",           label:"Highest Fat",      icon:"🧈", type:"high", unit:"g"  },
+  { id:"energy_kj",     label:"Lowest Energy",    icon:"😴", type:"low",  unit:"kJ" },
+  { id:"price",         label:"Highest Price",    icon:"💎", type:"high", unit:"$"  },
+  { id:"carbohydrate",  label:"Lowest Carbs",     icon:"🥦", type:"low",  unit:"g"  },
 ];
 
-// ══════════════════════════════════════════════════════════════════════
-//  SOLO GAME STATE
-// ══════════════════════════════════════════════════════════════════════
-let playerDeck = [], compDeck = [], tiePile = [];
-let roundHistory = [];
-let activePlayer = null, activeComp = null;
-let swapsLeft = 2;
-let canInteract = false;
-let currentMods = [];
-let modSetToggle = false;
-let gameStarted = false;
+// ══════════════════════════════════════════════════════
+//  SOUND ENGINE
+// ══════════════════════════════════════════════════════
+let audioCtx=null;
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx;}
+function masterGain(ctx,vol){const g=ctx.createGain();g.gain.value=vol;g.connect(ctx.destination);return g;}
+function sfxCardSwish(d=0){try{const ctx=getCtx(),t=ctx.currentTime+d,buf=ctx.createBuffer(1,ctx.sampleRate*0.18,ctx.sampleRate),da=buf.getChannelData(0);for(let i=0;i<da.length;i++)da[i]=(Math.random()*2-1);const src=ctx.createBufferSource();src.buffer=buf;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.setValueAtTime(3200,t);bp.frequency.exponentialRampToValueAtTime(900,t+0.15);bp.Q.value=1.2;const env=ctx.createGain();env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(0.35,t+0.02);env.gain.exponentialRampToValueAtTime(0.001,t+0.18);src.connect(bp);bp.connect(env);env.connect(ctx.destination);src.start(t);src.stop(t+0.2);}catch(e){}}
+function sfxCardFlip(){try{const ctx=getCtx(),t=ctx.currentTime,osc=ctx.createOscillator();osc.type='triangle';osc.frequency.setValueAtTime(280,t);osc.frequency.exponentialRampToValueAtTime(60,t+0.09);const env=ctx.createGain();env.gain.setValueAtTime(0.5,t);env.gain.exponentialRampToValueAtTime(0.001,t+0.12);osc.connect(env);env.connect(ctx.destination);osc.start(t);osc.stop(t+0.13);}catch(e){}}
+function sfxBoxReveal(){try{const ctx=getCtx(),t=ctx.currentTime;[0,0.05,0.1].forEach((d,i)=>{const o=ctx.createOscillator();o.type='square';o.frequency.value=440+i*220;const g=ctx.createGain();g.gain.setValueAtTime(0.15,t+d);g.gain.exponentialRampToValueAtTime(0.001,t+d+0.08);o.connect(g);g.connect(ctx.destination);o.start(t+d);o.stop(t+d+0.09);});}catch(e){}}
+function sfxRoundWin(){try{const ctx=getCtx(),notes=[523.25,659.25,783.99,1046.5];notes.forEach((freq,i)=>{const t=ctx.currentTime+i*0.1,o=ctx.createOscillator();o.type='sine';o.frequency.value=freq;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.4,t+0.03);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.45);});}catch(e){}}
+function sfxRoundLose(){try{const ctx=getCtx(),t=ctx.currentTime,o=ctx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(320,t);o.frequency.exponentialRampToValueAtTime(120,t+0.45);const wah=ctx.createBiquadFilter();wah.type='bandpass';wah.frequency.setValueAtTime(800,t);wah.frequency.exponentialRampToValueAtTime(200,t+0.45);wah.Q.value=4;const env=ctx.createGain();env.gain.setValueAtTime(0.35,t);env.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(wah);wah.connect(env);env.connect(ctx.destination);o.start(t);o.stop(t+0.55);}catch(e){}}
+function sfxTie(){try{const ctx=getCtx();[0,0.18].forEach(d=>{const t=ctx.currentTime+d,o=ctx.createOscillator();o.type='sine';o.frequency.value=350;const g=ctx.createGain();g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.15);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.16);});}catch(e){}}
+function sfxJackpot(){try{const ctx=getCtx(),mg=masterGain(ctx,0.7);for(let i=0;i<18;i++){const t=ctx.currentTime+0.05+i*0.12,buf=ctx.createBuffer(1,ctx.sampleRate*0.06,ctx.sampleRate),d=buf.getChannelData(0);for(let j=0;j<d.length;j++)d[j]=(Math.random()*2-1);const s=ctx.createBufferSource();s.buffer=buf;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2000+Math.random()*2000;bp.Q.value=8;const g=ctx.createGain();g.gain.setValueAtTime(0.6,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.06);s.connect(bp);bp.connect(g);g.connect(mg);s.start(t);s.stop(t+0.07);}const mel=[[523.25,0],[659.25,0.15],[783.99,0.3],[1046.5,0.45],[1318.51,1.1]];mel.forEach(([f,dl])=>{const t=ctx.currentTime+dl,o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.5,t+0.04);g.gain.exponentialRampToValueAtTime(0.001,t+0.35);o.connect(g);g.connect(mg);o.start(t);o.stop(t+0.38);});}catch(e){}}
+function sfxGameLose(){try{const ctx=getCtx(),notes=[392,329.63,261.63,196];notes.forEach((freq,i)=>{const t=ctx.currentTime+i*0.18,o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=freq;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=800;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.35,t+0.04);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(lp);lp.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.55);});}catch(e){}}
+function sfxSwap(){try{const ctx=getCtx(),t=ctx.currentTime,buf=ctx.createBuffer(1,ctx.sampleRate*0.25,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1);const s=ctx.createBufferSource();s.buffer=buf;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.setValueAtTime(200,t);hp.frequency.exponentialRampToValueAtTime(4000,t+0.2);const g=ctx.createGain();g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.25);s.connect(hp);hp.connect(g);g.connect(ctx.destination);s.start(t);s.stop(t+0.26);}catch(e){}}
 
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 //  HELPERS
-// ══════════════════════════════════════════════════════════════════════
-function getBrisbaneDateSeed() {
-  const now = new Date();
-  const brisbane = new Date(now.getTime() + 10 * 60 * 60 * 1000);
-  const y = brisbane.getUTCFullYear(), m = brisbane.getUTCMonth()+1, d = brisbane.getUTCDate();
-  return y * 10000 + m * 100 + d;
-}
-function seededRandom(seed) {
-  let s = seed;
-  return function() {
-    s |= 0; s = s + 0x6D2B79F5 | 0;
-    let t = Math.imul(s ^ s >>> 15, 1 | s);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-function dailyShuffle(arr) {
-  const seed = getBrisbaneDateSeed(), rng = seededRandom(seed), a = [...arr];
-  for (let i = a.length-1; i > 0; i--) { const j = Math.floor(rng()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
-  return a;
-}
-function getDailyDateStr() {
-  const now = new Date(), brisbane = new Date(now.getTime() + 10*60*60*1000);
-  return brisbane.toUTCString().slice(0,16);
-}
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
-  return a;
-}
-function fmt(val, unit) { return unit==='$' ? '$'+val.toFixed(2) : val+unit; }
-function genUID() { return Math.random().toString(36).slice(2,10); }
-function genRoomCode() {
-  const words = ['ALDI','CART','PILE','DEAL','SWAP','BRAN','OATS','CORN','RICE','SOUP','MILK','PEAS','BEEF','FISH','CAKE','CHIP'];
-  return words[Math.floor(Math.random()*words.length)] + Math.floor(10+Math.random()*90);
-}
+// ══════════════════════════════════════════════════════
+function getBrisbaneSeed(){const now=new Date(),b=new Date(now.getTime()+10*3600000);return b.getUTCFullYear()*10000+(b.getUTCMonth()+1)*100+b.getUTCDate();}
+function seededRng(seed){let s=seed;return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function dailyShuffle(arr){const rng=seededRng(getBrisbaneSeed()),a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function fmt(val,unit){return unit==='$'?'$'+val.toFixed(2):val+unit;}
+function uid(){return Math.random().toString(36).slice(2,10);}
+function genCode(){const w=['ALDI','CART','DEAL','OATS','CORN','RICE','SOUP','MILK','PEAS','BEEF','FISH','CAKE','CHIP','BRAN','MAYO','LIME','KIWI','TUNA'];return w[Math.floor(Math.random()*w.length)];}
+function getDailyStr(){const b=new Date(new Date().getTime()+10*3600000);return b.toUTCString().slice(0,16);}
+function imgSrc(p){return p.img.split('/').map((x,i)=>i===0?x:encodeURIComponent(x)).join('/');}
 
-// ══════════════════════════════════════════════════════════════════════
-//  LOBBY
-// ══════════════════════════════════════════════════════════════════════
-function setMode(mode) {
-  document.getElementById('mode-solo').classList.toggle('active', mode==='solo');
-  document.getElementById('mode-multi').classList.toggle('active', mode==='multi');
-  document.getElementById('solo-panel').style.display  = mode==='solo'  ? 'block' : 'none';
-  document.getElementById('multi-panel').style.display = mode==='multi' ? 'block' : 'none';
+// ══════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════
+let isMP=false, myId=null, myName='Player', amHost=false;
+let roomCode=null, roomRef=null;
+let mpPlayers={}, mpTurnOrder=[], mpScores={}, mpHands={};
+let currentTurnIdx=0;
 
-  if (mode==='multi' && !FIREBASE_READY) {
-    document.getElementById('lobby-error').textContent = '⚠️ Firebase not configured yet — see setup guide';
-  }
-}
+// Solo state
+let playerDeck=[], compDeck=[], tiePile=[];
+let activePlayer=null, activeComp=null;
+let swapsLeft=2, canInteract=false, gameStarted=false;
+let modSetToggle=false, currentMods=[];
+let roundHistory=[];
 
-function startSolo() {
-  const nameInput = document.getElementById('solo-name').value.trim();
-  myPlayerName = nameInput || 'Player';
-  isMultiplayer = false;
-  showGame();
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  MULTIPLAYER — ROOM MANAGEMENT
-// ══════════════════════════════════════════════════════════════════════
-async function doCreateRoom() {
-  if (!FIREBASE_READY) { document.getElementById('lobby-error').textContent = 'Firebase not configured yet.'; return; }
-  const name = document.getElementById('mp-name').value.trim();
-  if (!name) { document.getElementById('lobby-error').textContent = 'Enter your name first'; return; }
-  myPlayerName = name;
-  myPlayerId   = genUID();
-  amHost       = true;
-  myRoomCode   = genRoomCode();
-
-  const roomData = {
-    host: myPlayerId,
-    status: 'waiting',   // waiting | playing | finished
-    created: Date.now(),
-    players: {
-      [myPlayerId]: { name: myPlayerName, score: 0, ready: true, joined: Date.now() }
-    },
-    currentTurn: null,
-    roundState: null,
-  };
-
-  await db.ref('rooms/' + myRoomCode).set(roomData);
-  joinWaitingRoom();
-}
-
-async function doJoinRoom() {
-  if (!FIREBASE_READY) { document.getElementById('lobby-error').textContent = 'Firebase not configured yet.'; return; }
-  const name = document.getElementById('mp-name').value.trim();
-  const code = document.getElementById('join-code').value.trim().toUpperCase();
-  if (!name) { document.getElementById('lobby-error').textContent = 'Enter your name first'; return; }
-  if (!code)  { document.getElementById('lobby-error').textContent = 'Enter a room code'; return; }
-
-  const snap = await db.ref('rooms/' + code).once('value');
-  if (!snap.exists()) { document.getElementById('lobby-error').textContent = 'Room not found — check the code'; return; }
-  const room = snap.val();
-  if (room.status !== 'waiting') { document.getElementById('lobby-error').textContent = 'Game already started in that room'; return; }
-  const playerCount = Object.keys(room.players || {}).length;
-  if (playerCount >= 6) { document.getElementById('lobby-error').textContent = 'Room is full (max 6 players)'; return; }
-
-  myPlayerName = name;
-  myPlayerId   = genUID();
-  myRoomCode   = code;
-  amHost       = false;
-
-  await db.ref('rooms/' + code + '/players/' + myPlayerId).set({
-    name: myPlayerName, score: 0, ready: true, joined: Date.now()
-  });
-
-  joinWaitingRoom();
-}
-
-function joinWaitingRoom() {
-  document.getElementById('lobby').style.display   = 'none';
-  document.getElementById('waiting').style.display = 'flex';
-  document.getElementById('room-code-display').textContent = myRoomCode;
-
-  // Always hide spinner initially
-  document.getElementById('waiting-spinner').style.display = 'none';
-
-  // Host sees start button immediately
-  if (amHost) {
-    document.getElementById('waiting-start-btn').style.display = 'block';
-    document.getElementById('waiting-sub').textContent = 'Share this code — or start now to play vs TM';
-  } else {
-    document.getElementById('waiting-sub').textContent = 'Waiting for host to start...';
-    document.getElementById('waiting-spinner').style.display = 'block';
-  }
-
-  // Listen for room changes
-  roomRef = db.ref('rooms/' + myRoomCode);
-  roomListener = roomRef.on('value', snap => {
-    if (!snap.exists()) { leaveRoom(); return; }
-    const room = snap.val();
-    mpPlayers = room.players || {};
-
-    // Update waiting room player list
-    renderWaitingPlayers(mpPlayers);
-
-    // Update sub text with player count for host
-    if (amHost) {
-      const count = Object.keys(mpPlayers).length;
-      document.getElementById('waiting-sub').textContent =
-        count === 1 ? 'Share this code — or start now to play vs TM'
-                    : count + ' players ready — hit START!';
-    }
-
-    // Game started — enter game
-    if (room.status === 'playing' && document.getElementById('waiting').style.display !== 'none') {
-      enterMultiplayerGame(room);
-    }
-
-    // Live in-game updates
-    if (room.status === 'playing' && document.getElementById('game').style.display !== 'none') {
-      handleRoomUpdate(room);
-    }
-  });
-}
-
-function renderWaitingPlayers(players) {
-  const list = document.getElementById('players-list');
-  list.innerHTML = '';
-  Object.entries(players).forEach(([pid, p]) => {
-    const div = document.createElement('div');
-    div.className = 'player-entry' + (pid === myPlayerId ? ' you' : '');
-    div.innerHTML = `<span class="pe-icon">${pid === myPlayerId ? '🙋' : '👤'}</span>
-      <span>${p.name}${pid === myPlayerId ? ' (you)' : ''}</span>
-      ${amHost && pid === mpPlayers[Object.keys(mpPlayers)[0]]?.name ? '' : ''}
-      <span class="pe-host" style="margin-left:auto">${pid === Object.keys(players)[0] ? 'HOST' : ''}</span>`;
-    list.appendChild(div);
-  });
-}
-
-async function hostStartGame() {
-  if (!amHost) return;
-  const players = Object.keys(mpPlayers);
-  const turnOrder = shuffle(players);
-
-  // Deal hands — same daily shuffle for everyone, split among players
-  const shuffled = dailyShuffle(ALL_PRODUCTS);
-  const hands = {};
-  players.forEach((pid, i) => {
-    hands[pid] = shuffled.slice(i*5, i*5+5);
-  });
-  // TM gets next 5
-  const tmHand = shuffled.slice(players.length*5, players.length*5+5);
-
-  await roomRef.update({
-    status: 'playing',
-    turnOrder: turnOrder,
-    currentTurn: 0,
-    hands: hands,
-    tmHand: tmHand,
-    scores: Object.fromEntries(players.map(p => [p, 5])),
-    tmScore: 5,
-    tiePile: 0,
-    roundNum: 0,
-    modSetToggle: false,
-    roundState: null,
-  });
-}
-
-function enterMultiplayerGame(room) {
-  isMultiplayer = true;
-  document.getElementById('waiting').style.display = 'none';
-
-  // Set up my hand
-  const myHand = room.hands[myPlayerId];
-  if (myHand) {
-    playerDeck = [...myHand];
-  }
-  const tmHand = room.tmHand || [];
-  compDeck = [...tmHand];
-
-  mpTurnOrder = room.turnOrder || [];
-  myTurnIndex = mpTurnOrder.indexOf(myPlayerId);
-  mpScores    = room.scores || {};
-
-  // Show game
-  showMultiplayerGame(room);
-}
-
-function handleRoomUpdate(room) {
-  if (!room) return;
-  mpTurnOrder  = room.turnOrder || [];
-  mpPlayers    = room.players   || {};
-  mpScores     = room.scores    || {};
-
-  updateLiveBar();
-  updateScoreboard();
-
-  const currentTurnIdx = room.currentTurn || 0;
-  const activePid = mpTurnOrder[currentTurnIdx % mpTurnOrder.length];
-  isMyTurn = activePid === myPlayerId;
-
-  updateTurnBanner(activePid);
-
-  // If there's a round pick and I'm not the active player — show it
-  if (room.roundState && room.roundState.modId && !isMyTurn) {
-    const mod = [...MOD_SET_A, ...MOD_SET_B].find(m => m.id === room.roundState.modId && m.type === room.roundState.modType);
-    if (mod) applyRoundResult(room.roundState, mod);
-  }
-
-  canInteract = isMyTurn && room.status === 'playing';
-  if (!canInteract) {
-    document.getElementById('swap-btn').disabled = true;
-  }
-}
-
-function showMultiplayerGame(room) {
-  document.getElementById('live-bar').style.display        = 'flex';
-  document.getElementById('scoreboard-panel').style.display = 'block';
-  document.getElementById('turn-banner').style.display      = 'block';
-  document.getElementById('game').style.display             = 'flex';
-
-  document.getElementById('live-room-label').textContent   = myRoomCode;
-
-  updateLiveBar();
-  updateScoreboard();
-  buildModGrid();
-
-  const currentTurnIdx = room.currentTurn || 0;
-  const activePid = (room.turnOrder || [])[currentTurnIdx % (room.turnOrder || [myPlayerId]).length];
-  isMyTurn = activePid === myPlayerId;
-
-  updateTurnBanner(activePid);
-
-  // Start round display
-  setStatus(`🃏 Room ${myRoomCode} — Game on!`);
-  setTimeout(() => startRound(), 800);
-}
-
-function updateLiveBar() {
-  const count = Object.keys(mpPlayers).length;
-  document.getElementById('live-players-count').textContent = count + ' players';
-}
-
-function updateScoreboard() {
-  const list = document.getElementById('scoreboard-list');
-  list.innerHTML = '';
-
-  // Sort by score desc
-  const entries = Object.entries(mpPlayers).map(([pid, p]) => ({
-    pid, name: p.name, score: mpScores[pid] || 0
-  })).sort((a,b) => b.score - a.score);
-
-  entries.forEach(e => {
-    const div = document.createElement('div');
-    div.className = 'sb-entry' + (e.pid === myPlayerId ? ' sb-you' : '') + (e.score === Math.max(...entries.map(x=>x.score)) ? ' sb-winner' : '');
-    div.innerHTML = `${e.name}${e.pid===myPlayerId?' (you)':''}<span class="sb-score">${e.score}</span>`;
-    list.appendChild(div);
-  });
-}
-
-function updateTurnBanner(activePid) {
-  const banner = document.getElementById('turn-banner');
-  if (!activePid) { banner.style.display='none'; return; }
-  banner.style.display = 'block';
-  if (activePid === myPlayerId) {
-    banner.className = 'your-turn-banner';
-    banner.textContent = '⚡ YOUR TURN — pick a battle rule!';
-  } else {
-    banner.className = '';
-    const name = (mpPlayers[activePid] || {}).name || 'Player';
-    banner.textContent = `⏳ Waiting for ${name} to pick...`;
-  }
-}
-
-async function leaveRoom() {
-  if (roomRef && roomListener) {
-    roomRef.off('value', roomListener);
-  }
-  if (myRoomCode && myPlayerId && db) {
-    await db.ref('rooms/' + myRoomCode + '/players/' + myPlayerId).remove();
-  }
-  // Reset state
-  isMultiplayer = false; myRoomCode = null; myPlayerId = null; amHost = false;
-  document.getElementById('waiting').style.display = 'none';
-  document.getElementById('lobby').style.display   = 'flex';
-}
-
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 //  SPLASH → LOBBY
-// ══════════════════════════════════════════════════════════════════════
-function showGame() {
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('game').style.display  = 'flex';
+// ══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  ['touchstart','mousedown'].forEach(e=>document.addEventListener(e,()=>getCtx(),{once:true}));
+  const card=document.getElementById('splash-card');
+  card.animate([{transform:'scale(0.1) rotate(-180deg)',opacity:0},{transform:'scale(1.08) rotate(8deg)',opacity:1,offset:0.65},{transform:'scale(1) rotate(0)',opacity:1}],{duration:1300,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'forwards'});
+  setTimeout(()=>{
+    ['splash-title','splash-sub'].forEach(id=>document.getElementById(id).animate([{opacity:0,transform:'translateY(16px)'},{opacity:1,transform:'translateY(0)'}],{duration:500,easing:'ease-out',fill:'forwards'}));
+  },900);
+  setTimeout(()=>{
+    const s=document.getElementById('splash');
+    s.classList.add('out');
+    setTimeout(()=>{s.style.display='none'; document.getElementById('lobby').style.display='flex';},500);
+  },2800);
+});
+
+// ══════════════════════════════════════════════════════
+//  LOBBY
+// ══════════════════════════════════════════════════════
+function setMode(m){
+  document.getElementById('mode-solo').classList.toggle('active',m==='solo');
+  document.getElementById('mode-multi').classList.toggle('active',m==='multi');
+  document.getElementById('solo-panel').style.display=m==='solo'?'block':'none';
+  document.getElementById('multi-panel').style.display=m==='multi'?'block':'none';
+}
+
+function startSolo(){
+  myName=document.getElementById('solo-name').value.trim()||'Player';
+  isMP=false;
+  document.getElementById('my-label').textContent=myName;
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('tm-row').style.display='flex';
+  document.getElementById('opponents').style.display='none';
+  document.getElementById('score-row').style.display='flex';
+  document.getElementById('live-bar').style.display='none';
+  document.getElementById('scoreboard').style.display='none';
+  document.getElementById('turn-banner').style.display='none';
+  document.getElementById('swap-area').style.display='flex';
+  document.getElementById('game').style.display='flex';
+  document.getElementById('my-stack-lbl').textContent='Your Stack';
   buildModGrid();
   setStatus('Tap DEAL to begin!');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const unlock = () => { getCtx(); document.removeEventListener('touchstart', unlock); document.removeEventListener('mousedown', unlock); };
-  document.addEventListener('touchstart', unlock, { once: true });
-  document.addEventListener('mousedown',  unlock, { once: true });
+async function doCreate(){
+  const name=document.getElementById('mp-name').value.trim();
+  if(!name){setErr('Enter your name first');return;}
+  myName=name; myId=uid(); amHost=true; roomCode=genCode();
+  try{
+    await db.ref('rooms/'+roomCode).set({
+      host:myId, status:'waiting', created:Date.now(),
+      players:{[myId]:{name:myName,cards:0}},
+      turn:0, turnOrder:null, hands:null, scores:null,
+      pile:0, modSet:0, usedMods:[], roundState:null
+    });
+    enterWaiting();
+  }catch(e){setErr('Connection error: '+e.message);}
+}
 
-  const card = document.getElementById('splash-card');
-  const title = document.getElementById('splash-title');
-  const sub   = document.getElementById('splash-sub');
+async function doJoin(){
+  const name=document.getElementById('mp-name').value.trim();
+  const code=document.getElementById('join-code').value.trim().toUpperCase().slice(0,4);
+  if(!name){setErr('Enter your name first');return;}
+  if(code.length<3){setErr('Enter room code');return;}
+  try{
+    const snap=await db.ref('rooms/'+code).once('value');
+    if(!snap.exists()){setErr('Room not found');return;}
+    const room=snap.val();
+    if(room.status!=='waiting'){setErr('Game already started');return;}
+    const count=Object.keys(room.players||{}).length;
+    if(count>=5){setErr('Room is full (max 5)');return;}
+    myName=name; myId=uid(); amHost=false; roomCode=code;
+    await db.ref('rooms/'+code+'/players/'+myId).set({name:myName,cards:0});
+    enterWaiting();
+  }catch(e){setErr('Connection error: '+e.message);}
+}
 
-  const cardAnim = card.animate([
-    { transform: 'scale(0.1) rotate(-180deg)', opacity: 0 },
-    { transform: 'scale(1.08) rotate(8deg)',   opacity: 1, offset: 0.65 },
-    { transform: 'scale(1) rotate(0deg)',       opacity: 1 }
-  ], { duration: 1300, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' });
+function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
 
-  cardAnim.onfinish = () => {
-    title.animate([
-      { opacity: 0, transform: 'translateY(16px)' },
-      { opacity: 1, transform: 'translateY(0)' }
-    ], { duration: 500, easing: 'ease-out', fill: 'forwards' });
-    setTimeout(() => {
-      sub.animate([
-        { opacity: 0, transform: 'translateY(16px)' },
-        { opacity: 1, transform: 'translateY(0)' }
-      ], { duration: 500, easing: 'ease-out', fill: 'forwards' });
-    }, 200);
-  };
+// ══════════════════════════════════════════════════════
+//  WAITING ROOM
+// ══════════════════════════════════════════════════════
+function enterWaiting(){
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('waiting').style.display='flex';
+  document.getElementById('room-code').textContent=roomCode;
+  document.getElementById('w-spinner').style.display=amHost?'none':'block';
+  document.getElementById('start-btn').style.display=amHost?'block':'none';
+  document.getElementById('waiting-sub').textContent=amHost
+    ?'Share this code with friends to join'
+    :'Waiting for host to start...';
 
-  setTimeout(() => {
-    const s = document.getElementById('splash');
-    s.classList.add('hiding');
-    setTimeout(() => {
-      s.style.display = 'none';
-      document.getElementById('lobby').style.display = 'flex';
-    }, 500);
-  }, 2800);
-});
+  roomRef=db.ref('rooms/'+roomCode);
+  roomRef.on('value',snap=>{
+    if(!snap.exists()){leaveRoom();return;}
+    const room=snap.val();
+    mpPlayers=room.players||{};
+    renderWaiting(mpPlayers);
+    if(amHost){
+      const n=Object.keys(mpPlayers).length;
+      document.getElementById('waiting-sub').textContent=
+        n===1?'Waiting for players — or start solo vs TM':n+' players ready!';
+    }
+    // Host started — everyone enters game
+    if(room.status==='playing'){
+      enterMPGame(room);
+    }
+  });
+}
 
-// ══════════════════════════════════════════════════════════════════════
-//  MOD GRID
-// ══════════════════════════════════════════════════════════════════════
-function buildModGrid(remixing = false) {
-  const src = modSetToggle ? MOD_SET_B : MOD_SET_A;
-  currentMods = shuffle(src);
-  modSetToggle = !modSetToggle;
-  const grid = document.getElementById('mod-grid');
-  if (remixing) {
-    grid.classList.add('remixing');
-    sfxBoxReveal();
-    setTimeout(() => { grid.classList.remove('remixing'); _renderModCells(grid); }, 700);
+function renderWaiting(players){
+  const list=document.getElementById('player-list');
+  list.innerHTML='';
+  const pids=Object.keys(players);
+  pids.forEach(pid=>{
+    const p=players[pid];
+    const div=document.createElement('div');
+    div.className='p-entry'+(pid===myId?' me':'');
+    div.innerHTML=`<span>${pid===myId?'🙋':'👤'}</span>
+      <span>${p.name}${pid===myId?' (you)':''}</span>
+      <span class="pe-tag">${pid===pids[0]?'HOST':''}</span>`;
+    list.appendChild(div);
+  });
+}
+
+async function hostStart(){
+  if(!amHost)return;
+  const pids=Object.keys(mpPlayers);
+  const turnOrder=shuffle(pids);
+
+  // Deal hands from daily shuffle — each player gets 5 cards
+  const shuffled=dailyShuffle(ALL_PRODUCTS);
+  const hands={};
+  pids.forEach((pid,i)=>{hands[pid]=shuffled.slice(i*5,(i+1)*5).map(p=>p.name);});
+  const scores=Object.fromEntries(pids.map(p=>[p,5]));
+
+  await roomRef.update({
+    status:'playing',
+    turnOrder,
+    turn:0,
+    hands,
+    scores,
+    pile:0,
+    modSet:0,
+    usedMods:[],
+    roundState:null,
+    eliminated:{}
+  });
+}
+
+function leaveRoom(){
+  if(roomRef)roomRef.off();
+  if(roomCode&&myId)db.ref('rooms/'+roomCode+'/players/'+myId).remove();
+  roomCode=null; myId=null; amHost=false;
+  document.getElementById('waiting').style.display='none';
+  document.getElementById('lobby').style.display='flex';
+}
+
+// ══════════════════════════════════════════════════════
+//  ENTER MULTIPLAYER GAME
+// ══════════════════════════════════════════════════════
+function enterMPGame(room){
+  if(document.getElementById('game').style.display==='flex')return;
+  isMP=true;
+  mpPlayers=room.players||{};
+  mpTurnOrder=room.turnOrder||[];
+  mpScores=room.scores||{};
+  mpHands=room.hands||{};
+
+  // Build my local deck from hand names
+  const myHandNames=mpHands[myId]||[];
+  playerDeck=myHandNames.map(n=>ALL_PRODUCTS.find(p=>p.name===n)).filter(Boolean);
+
+  document.getElementById('waiting').style.display='none';
+  document.getElementById('game').style.display='flex';
+  document.getElementById('tm-row').style.display='none';
+  document.getElementById('opponents').style.display='flex';
+  document.getElementById('score-row').style.display='none';
+  document.getElementById('live-bar').style.display='flex';
+  document.getElementById('scoreboard').style.display='flex';
+  document.getElementById('turn-banner').style.display='block';
+  document.getElementById('swap-area').style.display='none'; // no swap in MP
+  document.getElementById('live-room').textContent=roomCode;
+  document.getElementById('my-label').textContent=myName;
+  document.getElementById('my-stack-lbl').textContent=myName+"'s Stack";
+
+  buildModGrid();
+  renderMPScoreboard();
+  renderOpponents();
+  updateTurnBanner();
+  setStatus('Game on! Same cards dealt to all players.');
+
+  // Listen for game updates
+  roomRef.on('value',snap=>{
+    if(!snap.exists())return;
+    const r=snap.val();
+    mpPlayers=r.players||{};
+    mpTurnOrder=r.turnOrder||[];
+    mpScores=r.scores||{};
+
+    renderMPScoreboard();
+    updateTurnBanner();
+    updateLiveCount();
+
+    // Someone picked a mod — resolve if I haven't yet
+    if(r.roundState&&r.roundState.modId&&r.roundState.resolved!==true){
+      handleMPRoundState(r.roundState, r);
+    }
+  });
+
+  setTimeout(()=>startMPRound(),600);
+}
+
+// ══════════════════════════════════════════════════════
+//  MULTIPLAYER ROUND
+// ══════════════════════════════════════════════════════
+function isMyMPTurn(){
+  return mpTurnOrder[currentTurnIdx % mpTurnOrder.length]===myId;
+}
+
+function startMPRound(){
+  if(playerDeck.length===0){mpEliminated();return;}
+  const allUsed=document.querySelectorAll('.mod-cell.used').length===8;
+  if(allUsed){
+    setStatus('🔄 Rules remix!');
+    setTimeout(()=>{buildModGrid(true);setTimeout(startMPRound,900);},600);
+    return;
+  }
+  activePlayer=playerDeck.shift();
+  updateCounts();
+  const pi=document.getElementById('player-inner');
+  pi.classList.remove('flipped');
+  document.getElementById('player-slot').classList.remove('revealed','your-turn');
+  buildCardFace('player',activePlayer);
+  setTimeout(()=>{
+    pi.classList.add('flipped');
+    sfxCardFlip();
+    document.getElementById('player-slot').classList.add('revealed');
+    if(isMyMPTurn()){
+      document.getElementById('player-slot').classList.add('your-turn');
+      canInteract=true;
+      setStatus('⚡ YOUR TURN — pick a battle rule!');
+      lockMods(false);
+    } else {
+      canInteract=false;
+      lockMods(true);
+      const activePlayerName=mpPlayers[mpTurnOrder[currentTurnIdx%mpTurnOrder.length]]?.name||'Player';
+      setStatus(`⏳ Waiting for ${activePlayerName} to pick...`);
+    }
+  },500);
+}
+
+function lockMods(locked){
+  document.querySelectorAll('.mod-cell').forEach(c=>{
+    c.classList.toggle('locked',locked&&!c.classList.contains('used'));
+  });
+}
+
+function handleMPRoundState(rs, room){
+  if(rs.handledBy&&rs.handledBy[myId])return; // already handled
+  const mod=[...MOD_SET_A,...MOD_SET_B].find(m=>m.id===rs.modId&&m.type===rs.modType);
+  if(!mod)return;
+
+  // Mark my handling
+  db.ref('rooms/'+roomCode+'/roundState/handledBy/'+myId).set(true);
+
+  // Stamp the used mod cell
+  document.querySelectorAll('.mod-cell').forEach(c=>{
+    const idx=parseInt(c.dataset.idx);
+    if(currentMods[idx]&&currentMods[idx].id===mod.id&&currentMods[idx].type===mod.type){
+      c.classList.add('used');
+    }
+  });
+
+  // Resolve battle for all players
+  const allHands=room.hands||{};
+  const allScores=room.scores||{};
+  const pile=room.pile||0;
+  const eliminated=room.eliminated||{};
+
+  // Get current card for each active player
+  const activePids=mpTurnOrder.filter(pid=>!eliminated[pid]&&(allScores[pid]||0)>0);
+  const cardValues={};
+  activePids.forEach(pid=>{
+    const handNames=allHands[pid]||[];
+    // The card they're playing is their first card (already shifted locally)
+    // We use round number to determine which card index
+    const roundNum=rs.roundNum||0;
+    const cardName=handNames[roundNum];
+    const card=ALL_PRODUCTS.find(p=>p.name===cardName);
+    if(card)cardValues[pid]={card,val:card[mod.id]};
+  });
+
+  // Find winner
+  const vals=Object.values(cardValues).map(v=>v.val).filter(v=>v!==undefined);
+  if(vals.length===0)return;
+  const winVal=mod.type==='high'?Math.max(...vals):Math.min(...vals);
+  const winners=Object.entries(cardValues).filter(([,v])=>v.val===winVal).map(([pid])=>pid);
+  const isTie=winners.length>1||winners.length===activePids.length;
+
+  // Did I win?
+  const myVal=cardValues[myId]?.val;
+  const iWon=winners.includes(myId);
+
+  // Show result
+  const resultScores=activePids.map(pid=>({
+    pid,
+    name:mpPlayers[pid]?.name||pid,
+    val:fmt(cardValues[pid]?.val||0,mod.unit),
+    winner:winners.includes(pid)
+  }));
+
+  const pFmt=fmt(myVal,mod.unit);
+
+  if(isTie){
+    sfxTie();
+    showMPResult('tie','🤝','DEAD HEAT',`Pile grows!`,resultScores);
+  } else if(iWon){
+    sfxRoundWin();
+    showMPResult('win','⚡','YOU WIN!',`${mod.icon} ${mod.label}`,resultScores);
   } else {
-    _renderModCells(grid);
+    sfxRoundLose();
+    const winnerName=mpPlayers[winners[0]]?.name||'Player';
+    showMPResult('lose','🛒',winnerName+' WINS!',`${mod.icon} ${mod.label}`,resultScores);
+  }
+
+  // Update my local deck score (host updates Firebase)
+  if(iWon&&!isTie){
+    // I won — get pile cards too (simplified: just track card counts)
+  }
+
+  // Advance turn after result
+  setTimeout(()=>{
+    currentTurnIdx++;
+    // Skip eliminated players
+    while(mpScores[mpTurnOrder[currentTurnIdx%mpTurnOrder.length]]===0 && mpTurnOrder.length>1){
+      currentTurnIdx++;
+    }
+    updateTurnBanner();
+    startMPRound();
+  },5500);
+}
+
+// Host resolves scores in Firebase
+async function mpPickMod(mod){
+  if(!canInteract||!isMyMPTurn())return;
+  canInteract=false;
+  lockMods(true);
+  sfxBoxReveal();
+
+  const roundNum=document.querySelectorAll('.mod-cell.used').length;
+  setStatus(`${mod.icon} ${mod.label}!`);
+
+  await db.ref('rooms/'+roomCode+'/roundState').set({
+    modId:mod.id,
+    modType:mod.type,
+    modUnit:mod.unit,
+    modLabel:mod.label,
+    modIcon:mod.icon,
+    pickedBy:myId,
+    roundNum,
+    handledBy:{},
+    ts:Date.now()
+  });
+
+  // Stamp locally
+  document.querySelectorAll('.mod-cell').forEach(c=>{
+    if(!c.classList.contains('used')){
+      const idx=parseInt(c.dataset.idx);
+      if(currentMods[idx]&&currentMods[idx].id===mod.id){
+        c.classList.add('used');
+      }
+    }
+  });
+}
+
+function mpEliminated(){
+  setStatus('You ran out of cards!');
+  // Still watch game
+}
+
+function renderOpponents(){
+  const area=document.getElementById('opponents');
+  area.innerHTML='';
+  mpTurnOrder.forEach(pid=>{
+    if(pid===myId)return;
+    const p=mpPlayers[pid];
+    if(!p)return;
+    const div=document.createElement('div');
+    div.className='opp-card';
+    div.id='opp-'+pid;
+    div.innerHTML=`
+      <div class="opp-name">${p.name}</div>
+      <div class="opp-slot">
+        <div class="opp-inner" id="opp-inner-${pid}">
+          <div class="opp-face"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
+          <div class="opp-back">
+            <div class="opp-hdr"><div class="opp-hdr-name" id="opp-name-${pid}">—</div></div>
+            <div class="opp-img"><img id="opp-img-${pid}" src="" alt=""></div>
+            <div class="opp-price" id="opp-price-${pid}">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="opp-count" id="opp-count-${pid}">${mpScores[pid]||5} cards</div>`;
+    area.appendChild(div);
+  });
+}
+
+function renderMPScoreboard(){
+  const sb=document.getElementById('scoreboard');
+  sb.innerHTML='';
+  const sorted=mpTurnOrder.map(pid=>({pid,name:mpPlayers[pid]?.name||pid,cards:mpScores[pid]||0}))
+    .sort((a,b)=>b.cards-a.cards);
+  sorted.forEach(({pid,name,cards})=>{
+    const isTurn=mpTurnOrder[currentTurnIdx%mpTurnOrder.length]===pid;
+    const chip=document.createElement('div');
+    chip.className='sb-chip'+(pid===myId?' me':'')+(isTurn?' active-turn':'')+(cards===0?' eliminated':'');
+    chip.innerHTML=`${name}<span class="sb-cards">${cards}</span>`;
+    sb.appendChild(chip);
+  });
+  document.getElementById('live-count').textContent=mpTurnOrder.length+' players';
+}
+
+function updateTurnBanner(){
+  if(!isMP)return;
+  const banner=document.getElementById('turn-banner');
+  const activePid=mpTurnOrder[currentTurnIdx%mpTurnOrder.length];
+  if(activePid===myId){
+    banner.className='my-turn';
+    banner.textContent='⚡ YOUR TURN — pick a battle rule!';
+  } else {
+    banner.className='';
+    banner.textContent='⏳ '+((mpPlayers[activePid]?.name)||'Player')+' is picking...';
   }
 }
 
-function _renderModCells(grid) {
-  grid.innerHTML = '';
-  currentMods.forEach((mod, i) => {
-    const cell = document.createElement('div');
-    cell.className = 'mod-cell';
-    cell.dataset.idx = i;
-    cell.innerHTML = `
-      <div class="mod-cell-inner" id="mod-inner-${i}">
-        <span class="mod-cell-icon">${mod.icon}</span>
-        <span class="mod-cell-label">${mod.label}</span>
-        <div class="mod-used-stamp">USED</div>
-      </div>`;
-    cell.addEventListener('click', () => onModClick(cell, mod, i));
+function updateLiveCount(){
+  document.getElementById('live-count').textContent=mpTurnOrder.length+' players';
+}
+
+function showMPResult(type,emoji,headline,detail,scores){
+  const overlay=document.getElementById('result-overlay');
+  const card=document.getElementById('result-card');
+  const bg=document.getElementById('result-bg');
+  document.getElementById('result-emoji').textContent=emoji;
+  document.getElementById('result-head').textContent=headline;
+  document.getElementById('result-detail').textContent=detail;
+
+  const scoresEl=document.getElementById('result-scores');
+  scoresEl.innerHTML=scores.map(s=>`
+    <div class="rs-box${s.winner?' winner':''}">
+      <div class="rs-name">${s.name}</div>
+      <div class="rs-val">${s.val}</div>
+    </div>`).join('');
+
+  card.className=card.className.replace(/win|lose|tie/g,'').trim()+' '+type;
+  bg.className=bg.className.replace(/win|lose|tie/g,'').trim()+' '+type;
+  overlay.classList.remove('out');overlay.classList.add('show');
+  setTimeout(()=>{overlay.classList.add('out');setTimeout(()=>overlay.classList.remove('show','out'),300);},4800);
+}
+
+// ══════════════════════════════════════════════════════
+//  MOD GRID
+// ══════════════════════════════════════════════════════
+function buildModGrid(remixing=false){
+  const src=modSetToggle?MOD_SET_B:MOD_SET_A;
+  currentMods=shuffle(src);
+  modSetToggle=!modSetToggle;
+  const grid=document.getElementById('mod-grid');
+  if(remixing){grid.classList.add('remixing');sfxBoxReveal();setTimeout(()=>{grid.classList.remove('remixing');renderMods(grid);},700);}
+  else renderMods(grid);
+}
+function renderMods(grid){
+  grid.innerHTML='';
+  currentMods.forEach((mod,i)=>{
+    const cell=document.createElement('div');
+    cell.className='mod-cell'; cell.dataset.idx=i;
+    cell.innerHTML=`<div class="mod-inner" id="mod-inner-${i}">
+      <span class="mod-icon">${mod.icon}</span>
+      <span class="mod-lbl">${mod.label}</span>
+      <div class="mod-stamp">USED</div></div>`;
+    cell.addEventListener('click',()=>{
+      if(isMP){mpPickMod(mod);}
+      else onModClick(cell,mod,i);
+    });
     grid.appendChild(cell);
   });
 }
 
-function onModClick(cell, mod, idx) {
-  if (!canInteract) return;
-  if (cell.classList.contains('used')) return;
+// ══════════════════════════════════════════════════════
+//  SOLO GAME LOGIC
+// ══════════════════════════════════════════════════════
+const CAT_HINTS={cereal:{icon:'🥣',label:'Cereal'},biscuits:{icon:'🍪',label:'Biscuits'},spreads:{icon:'🫙',label:'Spreads'},yoghurt:{icon:'🍦',label:'Yoghurt'},tinned:{icon:'🥫',label:'Tinned'},'rice pasta':{icon:'🍝',label:'Rice & Pasta'},sauces:{icon:'🫙',label:'Sauces'},milk:{icon:'🥛',label:'Milk'},'juices cordials':{icon:'🧃',label:'Juice'},frozen:{icon:'🧊',label:'Frozen'},icecreams:{icon:'🍨',label:'Ice Cream'}};
+function getCategory(img){return(img.split('/')||[])[1]?.toLowerCase()||'';}
 
-  // Multiplayer — check it's my turn
-  if (isMultiplayer && !isMyTurn) {
-    setStatus("⏳ It's not your turn yet!");
-    return;
-  }
-
-  canInteract = false;
-  document.getElementById('swap-btn').disabled = true;
-  cell.classList.add('used');
-  sfxBoxReveal();
-  setStatus(`${mod.icon} ${mod.label}! Revealing Trolley Master's card...`);
-
-  // In multiplayer — publish the pick to Firebase
-  if (isMultiplayer && db) {
-    roomRef.update({
-      roundState: {
-        modId:   mod.id,
-        modType: mod.type,
-        modUnit: mod.unit,
-        modLabel: mod.label,
-        modIcon:  mod.icon,
-        pickedBy: myPlayerId,
-        timestamp: Date.now(),
-      }
-    });
-  }
-
-  setTimeout(() => {
-    clearTMHint();
-    document.getElementById('comp-inner').classList.add('flipped');
-    sfxCardFlip();
-    document.getElementById('comp-slot').classList.add('revealed');
-    setTimeout(() => resolveBattle(mod), 2000);
-  }, 900);
-}
-
-function applyRoundResult(roundState, mod) {
-  // Called on non-active players to show what was picked
-  setStatus(`${roundState.modIcon} ${mpPlayers[roundState.pickedBy]?.name || 'Player'} picked ${roundState.modLabel}!`);
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  DEAL
-// ══════════════════════════════════════════════════════════════════════
-function startDeal() {
-  if (gameStarted) return;
-  gameStarted = true;
-
-  const deck = document.getElementById('dealer-deck');
-  deck.style.display = 'none';
-  document.getElementById('deal-btn').style.display = 'none';
-
-  if (!isMultiplayer) {
-    const shuffled = dailyShuffle(ALL_PRODUCTS);
-    playerDeck = shuffled.slice(0, 5);
-    compDeck   = shuffled.slice(5, 10);
-  }
-
-  setStatus(`🗓️ ${getDailyDateStr()} — same cards for everyone today!`);
-
-  let i = 0;
-  const dealerRect = document.getElementById('pile-box').getBoundingClientRect();
-
-  const interval = setInterval(() => {
-    if (i >= 10) {
-      clearInterval(interval);
-      updateCounts();
-      setTimeout(startRound, 400);
-      return;
-    }
-    const isPlayer = i % 2 === 0;
-    const target = document.getElementById(isPlayer ? 'player-count' : 'comp-count').closest('.stack-box');
-    const tRect = target.getBoundingClientRect();
-    const el = document.createElement('div');
-    el.className = 'deal-anim';
-    el.innerHTML = `<img src="logo.png" alt="">`;
-    el.style.left = (dealerRect.left + dealerRect.width/2 - 25) + 'px';
-    el.style.top  = (dealerRect.top + window.scrollY + dealerRect.height/2 - 37) + 'px';
+function startDeal(){
+  if(gameStarted)return; gameStarted=true;
+  document.getElementById('dealer-deck').style.display='none';
+  document.getElementById('deal-btn').style.display='none';
+  const shuffled=dailyShuffle(ALL_PRODUCTS);
+  playerDeck=shuffled.slice(0,5); compDeck=shuffled.slice(5,10);
+  setStatus(`🗓️ ${getDailyStr()} — same cards for everyone today!`);
+  let i=0;
+  const dealerRect=document.getElementById('pile-box').getBoundingClientRect();
+  const interval=setInterval(()=>{
+    if(i>=10){clearInterval(interval);updateCounts();setTimeout(startRound,400);return;}
+    const isP=i%2===0;
+    const target=document.getElementById(isP?'player-count':'comp-count').closest('.stack-box');
+    const tRect=target.getBoundingClientRect();
+    const el=document.createElement('div');
+    el.className='deal-anim'; el.innerHTML='<img src="logo.png" alt="">';
+    el.style.left=(dealerRect.left+dealerRect.width/2-23)+'px';
+    el.style.top=(dealerRect.top+window.scrollY+dealerRect.height/2-34)+'px';
     document.body.appendChild(el);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        el.style.left = (tRect.left + tRect.width/2 - 25) + 'px';
-        el.style.top  = (tRect.top + window.scrollY + tRect.height/2 - 37) + 'px';
-        el.style.transform = 'rotate(8deg)';
-      });
-    });
-    setTimeout(() => { el.remove(); updateCounts(); sfxCardSwish(0); }, 460);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      el.style.left=(tRect.left+tRect.width/2-23)+'px';
+      el.style.top=(tRect.top+window.scrollY+tRect.height/2-34)+'px';
+      el.style.transform='rotate(8deg)';
+    }));
+    setTimeout(()=>{el.remove();updateCounts();sfxCardSwish(0);},450);
     i++;
-  }, 200);
-
-  setStatus('Shuffling and dealing 5 cards each...');
+  },200);
 }
 
-// ══════════════════════════════════════════════════════════════════════
-//  CATEGORY HINTS
-// ══════════════════════════════════════════════════════════════════════
-const CAT_HINTS = {
-  cereal:             { icon: '🥣', label: 'Cereal'       },
-  biscuits:           { icon: '🍪', label: 'Biscuits'     },
-  spreads:            { icon: '🫙', label: 'Spreads'      },
-  yoghurt:            { icon: '🍦', label: 'Yoghurt'      },
-  tinned:             { icon: '🥫', label: 'Tinned'       },
-  'rice pasta':       { icon: '🍝', label: 'Rice & Pasta' },
-  sauces:             { icon: '🫙', label: 'Sauces'       },
-  milk:               { icon: '🥛', label: 'Milk'         },
-  'juices cordials':  { icon: '🧃', label: 'Juice'        },
-  frozen:             { icon: '🧊', label: 'Frozen Food'  },
-  icecreams:          { icon: '🍨', label: 'Ice Cream'    },
-};
-function getCategoryFromImg(img) { const parts = img.split('/'); return parts.length>=2 ? parts[1].toLowerCase() : ''; }
-function setTMHint(product) {
-  const cat = getCategoryFromImg(product.img);
-  const hint = CAT_HINTS[cat] || { icon: '🛒', label: 'Mystery' };
-  const el = document.getElementById('tm-hint');
-  el.innerHTML = `<span class="tm-hint-icon">${hint.icon}</span><span class="tm-hint-txt">${hint.label}</span>`;
-  el.style.opacity = '1';
-}
-function clearTMHint() { const el = document.getElementById('tm-hint'); if(el) el.style.opacity='0'; }
-
-// ══════════════════════════════════════════════════════════════════════
-//  ROUND
-// ══════════════════════════════════════════════════════════════════════
-function startRound() {
-  if (playerDeck.length === 0 || compDeck.length === 0) { endGame(); return; }
-
-  const allUsed = document.querySelectorAll('.mod-cell.used').length === 8;
-  if (allUsed) {
-    setStatus('🔄 Rules remix incoming...');
-    setTimeout(() => {
-      buildModGrid(true);
-      setStatus('⚡ New rules — choose your battle!');
-      setTimeout(startRound, 900);
-    }, 600);
-    return;
-  }
-
-  activePlayer = playerDeck.shift();
-  activeComp   = compDeck.shift();
+function startRound(){
+  if(isMP){startMPRound();return;}
+  if(playerDeck.length===0||compDeck.length===0){endGame();return;}
+  const allUsed=document.querySelectorAll('.mod-cell.used').length===8;
+  if(allUsed){setStatus('🔄 Rules remix!');setTimeout(()=>{buildModGrid(true);setStatus('⚡ New rules!');setTimeout(startRound,900);},600);return;}
+  activePlayer=playerDeck.shift();
+  activeComp=compDeck.shift();
   updateCounts();
-
-  const pi = document.getElementById('player-inner');
-  const ci = document.getElementById('comp-inner');
-  pi.classList.remove('flipped');
-  ci.classList.remove('flipped');
-  document.getElementById('player-slot').classList.remove('revealed', 'your-turn');
-  document.getElementById('comp-slot').classList.remove('revealed');
-
-  buildCardFace('player', activePlayer);
-  buildCardFace('comp',   activeComp);
-  setTMHint(activeComp);
-
-  setTimeout(() => {
-    pi.classList.add('flipped');
-    sfxCardFlip();
-    document.getElementById('player-slot').classList.add('revealed', 'your-turn');
-    if (swapsLeft > 0) document.getElementById('swap-btn').disabled = false;
-
-    if (isMultiplayer) {
-      // Only enable interaction if it's my turn
-      const currentRoom = null; // handled by Firebase listener
-      canInteract = isMyTurn;
-      if (!isMyTurn) {
-        setStatus('⏳ Waiting for active player to pick...');
-        document.getElementById('swap-btn').disabled = true;
-      } else {
-        setStatus('⚡ YOUR TURN — pick a battle rule! 👇');
-      }
-    } else {
-      canInteract = true;
-      setStatus('Pick a battle rule — choose wisely! 👇');
-    }
-  }, 500);
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  BUILD CARD FACE
-// ══════════════════════════════════════════════════════════════════════
-function buildCardFace(who, product) {
-  document.getElementById(who+'-cf-name').textContent  = product.name;
-  document.getElementById(who+'-cf-price').textContent = '$'+product.price.toFixed(2);
-  const imgSrc = product.img.split('/').map((part,i) => i===0 ? part : encodeURIComponent(part)).join('/');
-  document.getElementById(who+'-cf-img').src = imgSrc;
-  document.getElementById(who+'-cf-img').alt = product.name;
-  const rows = [
-    ['Energy',  product.energy_kj     +' kJ'],
-    ['Protein', product.protein       +' g'],
-    ['Fat',     product.fat           +' g'],
-    ['Sat Fat', product.saturated_fat +' g'],
-    ['Carbs',   product.carbohydrate  +' g'],
-    ['Sugars',  product.sugars        +' g'],
-    ['Fibre',   product.dietary_fibre +' g'],
-    ['Sodium',  product.sodium        +' mg'],
-  ];
-  document.getElementById(who+'-cf-rows').innerHTML = rows.map(([label,val]) =>
-    `<div class="cf-row"><span class="cf-row-label">${label}</span><span class="cf-row-val">${val}</span></div>`
-  ).join('');
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  RESOLVE BATTLE
-// ══════════════════════════════════════════════════════════════════════
-function resolveBattle(mod) {
-  const pVal = activePlayer[mod.id];
-  const cVal = activeComp[mod.id];
-  const isTie = pVal === cVal;
-  let playerWins = false;
-  if (!isTie) { playerWins = mod.type==='high' ? pVal>cVal : pVal<cVal; }
-
-  const pFmt = fmt(pVal, mod.unit);
-  const cFmt = fmt(cVal, mod.unit);
-
-  // Multiplayer — update score in Firebase
-  if (isMultiplayer && db && isMyTurn) {
-    const newScore = (mpScores[myPlayerId] || 5) + (playerWins ? 1 : isTie ? 0 : -1);
-    db.ref('rooms/' + myRoomCode + '/scores/' + myPlayerId).set(Math.max(0, newScore));
-    // Advance turn
-    const currentTurnIdx = mpTurnOrder.indexOf(myPlayerId);
-    roomRef.update({ currentTurn: (currentTurnIdx+1) % mpTurnOrder.length, roundState: null });
-  }
-
-  if (isTie) {
-    roundHistory.push('t'); sfxTie();
-    showResult('tie','🤝','DEAD HEAT',`Both score ${pFmt} — the pile grows!`,pFmt,cFmt,false,false);
-    tiePile.push(activePlayer, activeComp);
-  } else if (playerWins) {
-    roundHistory.push('w'); sfxRoundWin();
-    showResult('win','⚡','YOU WIN!',`${activePlayer.name} takes it!`,pFmt,cFmt,true,false);
-    playerDeck.push(activePlayer, activeComp, ...tiePile); tiePile=[];
-  } else {
-    roundHistory.push('l'); sfxRoundLose();
-    showResult('lose','🛒','TM WINS',`The Trolley Master cleans up!`,pFmt,cFmt,false,true);
-    compDeck.push(activePlayer, activeComp, ...tiePile); tiePile=[];
-  }
-
-  activePlayer=null; activeComp=null;
-  document.getElementById('player-slot').classList.remove('your-turn');
-  document.getElementById('swap-btn').disabled = true;
-  setTimeout(() => { updateCounts(); startRound(); }, 5200);
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  RESULT OVERLAY
-// ══════════════════════════════════════════════════════════════════════
-function showResult(type, emoji, headline, detail, pVal, cVal, pWins, cWins) {
-  const overlay = document.getElementById('result-overlay');
-  const card    = document.getElementById('result-card');
-  const bg      = document.getElementById('result-bg');
-  document.getElementById('result-emoji').textContent    = emoji;
-  document.getElementById('result-headline').textContent = headline;
-  document.getElementById('result-detail').textContent   = detail;
-  document.getElementById('rv-player').textContent = pVal;
-  document.getElementById('rv-comp').textContent   = cVal;
-  document.getElementById('rv-player').classList.toggle('winner', pWins);
-  document.getElementById('rv-comp').classList.toggle('winner', cWins);
-  card.className = 'win lose tie'.split(' ').reduce((c,t)=>c.replace(t,''),card.className).trim()+' '+type;
-  bg.className   = 'win lose tie'.split(' ').reduce((c,t)=>c.replace(t,''),bg.className).trim()+' '+type;
-  overlay.classList.remove('hiding'); overlay.classList.add('show');
-  setTimeout(() => { overlay.classList.add('hiding'); setTimeout(()=>overlay.classList.remove('show','hiding'),300); }, 4600);
-  updateCounts();
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  SWAP
-// ══════════════════════════════════════════════════════════════════════
-function doSwap() {
-  if (!canInteract || swapsLeft<=0 || !activePlayer) return;
-  swapsLeft--; sfxSwap();
-  document.getElementById('swap-count').textContent = swapsLeft+' swaps left';
-  document.getElementById('swap-btn').disabled = true;
-  [activePlayer, activeComp] = [activeComp, activePlayer];
-  buildCardFace('player', activePlayer);
-  buildCardFace('comp',   activeComp);
-  const pi = document.getElementById('player-inner');
-  pi.style.transition='none'; pi.classList.remove('flipped');
-  setTimeout(()=>{ pi.style.transition=''; pi.classList.add('flipped'); },100);
-  setStatus('🃏 You stole their card! Now pick your stat wisely... 👇');
-  showSwapToast();
-}
-function showSwapToast() {
-  const toast = document.getElementById('swap-toast');
-  toast.classList.remove('hiding'); toast.classList.add('show');
-  setTimeout(()=>{ toast.classList.add('hiding'); setTimeout(()=>toast.classList.remove('show','hiding'),250); },1800);
-}
-
-// ══════════════════════════════════════════════════════════════════════
-//  ZOOM
-// ══════════════════════════════════════════════════════════════════════
-function openZoom(who) {
-  const src = who==='player' ? document.getElementById('player-img')?.src : document.getElementById('comp-img')?.src;
-  const cfImg = document.getElementById(who+'-cf-img');
-  const inner = document.getElementById(who+'-inner');
-  if (!inner.classList.contains('flipped')) return;
-  document.getElementById('zoom-img').src = cfImg ? cfImg.src : '';
-  document.getElementById('zoom-modal').classList.add('open');
-}
-function closeZoom() { document.getElementById('zoom-modal').classList.remove('open'); }
-
-// ══════════════════════════════════════════════════════════════════════
-//  RULES
-// ══════════════════════════════════════════════════════════════════════
-function openRules()  { document.getElementById('rules-modal').classList.add('open'); }
-function closeRules() { document.getElementById('rules-modal').classList.remove('open'); }
-
-// ══════════════════════════════════════════════════════════════════════
-//  COUNTERS
-// ══════════════════════════════════════════════════════════════════════
-function updateCounts() {
-  document.getElementById('player-count').textContent = playerDeck.length + (activePlayer?1:0);
-  document.getElementById('comp-count').textContent   = compDeck.length   + (activeComp?1:0);
-  document.getElementById('pile-count').textContent   = tiePile.length;
-  document.getElementById('s-player').textContent     = playerDeck.length + (activePlayer?1:0);
-  document.getElementById('s-comp').textContent       = compDeck.length   + (activeComp?1:0);
-}
-function setStatus(msg) { document.getElementById('status').textContent = msg; }
-
-// ══════════════════════════════════════════════════════════════════════
-//  GAME OVER
-// ══════════════════════════════════════════════════════════════════════
-function endGame() {
-  const playerWon = compDeck.length === 0;
-  const go = document.getElementById('gameover');
-  if (playerWon) { sfxJackpot(); document.getElementById('go-win').style.display='flex'; document.getElementById('go-lose').style.display='none'; }
-  else { sfxGameLose(); document.getElementById('go-win').style.display='none'; document.getElementById('go-lose').style.display='flex'; }
-  go.classList.add('open');
-
-  if (isMultiplayer && db) {
-    roomRef.update({ status: 'finished' });
-  }
-}
-
-function doShare() {
-  const squares = roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
-  const rounds = roundHistory.length, dateStr = getDailyDateStr();
-  const text = `🛒 TOP PROD — ${dateStr}\n\nSweet! I beat Today's Trolley Master in ${rounds} rounds! 🏆\n${squares}\n\n🟩 My wins  🟥 TM wins  🟦 Tie\n\nHow did you go? 👉 ${location.href}`;
-  if (navigator.share) {
-    navigator.share({ title:'TOP PROD', text, url:location.href }).catch(()=>{});
-  } else {
-    navigator.clipboard.writeText(text).then(()=>{
-      const btn = document.getElementById('go-share-btn');
-      const orig = btn.textContent;
-      btn.textContent='✅ Copied to clipboard!';
-      setTimeout(()=>btn.textContent=orig, 2500);
-    });
-  }
-}
-
-function doTomorrow() {
-  const btn = document.getElementById('go-tomorrow-btn');
-  btn.textContent='✅ See you tomorrow!'; btn.disabled=true;
-  setTimeout(()=>document.getElementById('gameover').classList.remove('open'), 1800);
-}
-
-function restartGame() {
-  playerDeck=[]; compDeck=[]; tiePile=[]; roundHistory=[];
-  activePlayer=null; activeComp=null;
-  swapsLeft=2; canInteract=false; gameStarted=false; modSetToggle=false;
-  document.getElementById('player-count').textContent='-';
-  document.getElementById('comp-count').textContent='-';
-  document.getElementById('pile-count').textContent='0';
-  document.getElementById('s-player').textContent='-';
-  document.getElementById('s-comp').textContent='-';
-  document.getElementById('swap-count').textContent='2 swaps left';
-  document.getElementById('swap-btn').disabled=true;
-  const pi=document.getElementById('player-inner'), ci=document.getElementById('comp-inner');
-  pi.classList.remove('flipped'); ci.classList.remove('flipped');
+  const pi=document.getElementById('player-inner'),ci=document.getElementById('comp-inner');
+  pi.classList.remove('flipped');ci.classList.remove('flipped');
   document.getElementById('player-slot').classList.remove('revealed','your-turn');
   document.getElementById('comp-slot').classList.remove('revealed');
-  clearTMHint();
+  buildCardFace('player',activePlayer);
+  buildCardFace('comp',activeComp);
+  // TM hint
+  const cat=getCategory(activeComp.img);
+  const hint=CAT_HINTS[cat]||{icon:'🛒',label:'Mystery'};
+  const hel=document.getElementById('tm-hint');
+  hel.innerHTML=`<span style="font-size:16px">${hint.icon}</span><span style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;color:#fff;margin-left:4px">${hint.label}</span>`;
+  hel.style.opacity='1';
+  setTimeout(()=>{
+    pi.classList.add('flipped');sfxCardFlip();
+    document.getElementById('player-slot').classList.add('revealed','your-turn');
+    if(swapsLeft>0)document.getElementById('swap-btn').disabled=false;
+    canInteract=true;
+    setStatus('Pick a battle rule — choose wisely! 👇');
+  },500);
+}
+
+function onModClick(cell,mod,idx){
+  if(!canInteract)return;
+  if(cell.classList.contains('used'))return;
+  canInteract=false;
+  document.getElementById('swap-btn').disabled=true;
+  cell.classList.add('used');sfxBoxReveal();
+  setStatus(`${mod.icon} ${mod.label}! Revealing TM card...`);
+  document.getElementById('tm-hint').style.opacity='0';
+  setTimeout(()=>{
+    document.getElementById('comp-inner').classList.add('flipped');sfxCardFlip();
+    document.getElementById('comp-slot').classList.add('revealed');
+    setTimeout(()=>resolveSolo(mod),2000);
+  },900);
+}
+
+function resolveSolo(mod){
+  const pVal=activePlayer[mod.id],cVal=activeComp[mod.id];
+  const tie=pVal===cVal;
+  const pWins=!tie&&(mod.type==='high'?pVal>cVal:pVal<cVal);
+  const pFmt=fmt(pVal,mod.unit),cFmt=fmt(cVal,mod.unit);
+
+  const scoresData=[
+    {name:myName,val:pFmt,winner:pWins&&!tie},
+    {name:'Trolley Master',val:cFmt,winner:!pWins&&!tie}
+  ];
+
+  if(tie){
+    roundHistory.push('t');sfxTie();
+    showMPResult('tie','🤝','DEAD HEAT',`Both ${pFmt} — pile grows!`,scoresData);
+    tiePile.push(activePlayer,activeComp);
+  } else if(pWins){
+    roundHistory.push('w');sfxRoundWin();
+    showMPResult('win','⚡','YOU WIN!',`${activePlayer.name}`,scoresData);
+    playerDeck.push(activePlayer,activeComp,...tiePile);tiePile=[];
+  } else {
+    roundHistory.push('l');sfxRoundLose();
+    showMPResult('lose','🛒','TM WINS',`${activeComp.name}`,scoresData);
+    compDeck.push(activePlayer,activeComp,...tiePile);tiePile=[];
+  }
+  activePlayer=null;activeComp=null;
+  document.getElementById('player-slot').classList.remove('your-turn');
+  document.getElementById('swap-btn').disabled=true;
+  setTimeout(()=>{updateCounts();startRound();},5200);
+}
+
+function buildCardFace(who,product){
+  document.getElementById(who+'-cf-name').textContent=product.name;
+  document.getElementById(who+'-cf-price').textContent='$'+product.price.toFixed(2);
+  document.getElementById(who+'-cf-img').src=imgSrc(product);
+  document.getElementById(who+'-cf-img').alt=product.name;
+  const rows=[['Energy',product.energy_kj+' kJ'],['Protein',product.protein+' g'],['Fat',product.fat+' g'],['Sat Fat',product.saturated_fat+' g'],['Carbs',product.carbohydrate+' g'],['Sugars',product.sugars+' g'],['Fibre',product.dietary_fibre+' g'],['Sodium',product.sodium+' mg']];
+  document.getElementById(who+'-cf-rows').innerHTML=rows.map(([l,v])=>`<div class="cf-row"><span class="cf-rlbl">${l}</span><span class="cf-rval">${v}</span></div>`).join('');
+}
+
+function doSwap(){
+  if(!canInteract||swapsLeft<=0||!activePlayer)return;
+  swapsLeft--;sfxSwap();
+  document.getElementById('swap-n').textContent=swapsLeft+' swaps left';
+  document.getElementById('swap-btn').disabled=true;
+  [activePlayer,activeComp]=[activeComp,activePlayer];
+  buildCardFace('player',activePlayer);buildCardFace('comp',activeComp);
+  const pi=document.getElementById('player-inner');
+  pi.style.transition='none';pi.classList.remove('flipped');
+  setTimeout(()=>{pi.style.transition='';pi.classList.add('flipped');},100);
+  setStatus('🃏 Swapped! Now pick your stat...');
+  const t=document.getElementById('swap-toast');
+  document.getElementById('swap-toast-txt').textContent='Cards swapped!';
+  t.classList.remove('out');t.classList.add('show');
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.classList.remove('show','out'),250);},1800);
+}
+
+function updateCounts(){
+  if(isMP){
+    document.getElementById('player-count').textContent=playerDeck.length+(activePlayer?1:0);
+    // Update opponent counts
+    mpTurnOrder.forEach(pid=>{
+      if(pid===myId)return;
+      const el=document.getElementById('opp-count-'+pid);
+      if(el)el.textContent=(mpScores[pid]||0)+' cards';
+    });
+    return;
+  }
+  document.getElementById('player-count').textContent=playerDeck.length+(activePlayer?1:0);
+  document.getElementById('comp-count').textContent=compDeck.length+(activeComp?1:0);
+  document.getElementById('pile-n').textContent=tiePile.length;
+  document.getElementById('s-player').textContent=playerDeck.length+(activePlayer?1:0);
+  document.getElementById('s-comp').textContent=compDeck.length+(activeComp?1:0);
+}
+
+function setStatus(msg){document.getElementById('status').textContent=msg;}
+function openZoom(){
+  const inner=document.getElementById('player-inner');
+  if(!inner.classList.contains('flipped'))return;
+  document.getElementById('zoom-img').src=document.getElementById('player-cf-img').src;
+  document.getElementById('zoom-modal').classList.add('open');
+}
+function closeZoom(){document.getElementById('zoom-modal').classList.remove('open');}
+function openRules(){document.getElementById('rules-modal').classList.add('open');}
+function closeRules(){document.getElementById('rules-modal').classList.remove('open');}
+
+function endGame(){
+  const won=compDeck.length===0;
+  const go=document.getElementById('gameover');
+  document.getElementById('go-emoji').textContent=won?'🏆':'🛒';
+  document.getElementById('go-title').textContent=won?'CHAMPION!':'TROLLED!';
+  document.getElementById('go-title').style.color=won?'#4ade80':'#f87171';
+  document.getElementById('go-sub').textContent=won?'You emptied the Trolley Master\'s cart!':'The Trolley Master cleaned you out.';
+  won?sfxJackpot():sfxGameLose();
+  go.classList.add('open');
+}
+
+function doShare(){
+  const sq=roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
+  const text=`🛒 TOP PROD — ${getDailyStr()}\n\n${roundHistory.filter(r=>r==='w').length} wins vs TM!\n${sq}\n\n👉 ${location.href}`;
+  if(navigator.share)navigator.share({title:'TOP PROD',text,url:location.href}).catch(()=>{});
+  else navigator.clipboard.writeText(text).then(()=>{const b=document.querySelector('.go-btn.share');b.textContent='✅ Copied!';setTimeout(()=>b.textContent='📣 Share Result',2500);});
+}
+
+function restartGame(){
+  if(isMP){
+    if(roomRef)roomRef.off();
+    isMP=false;roomCode=null;myId=null;amHost=false;
+    document.getElementById('game').style.display='none';
+    document.getElementById('gameover').classList.remove('open');
+    document.getElementById('lobby').style.display='flex';
+    return;
+  }
+  playerDeck=[];compDeck=[];tiePile=[];roundHistory=[];
+  activePlayer=null;activeComp=null;
+  swapsLeft=2;canInteract=false;gameStarted=false;modSetToggle=false;
+  ['player-count','comp-count','s-player','s-comp'].forEach(id=>document.getElementById(id).textContent='-');
+  document.getElementById('pile-n').textContent='0';
+  document.getElementById('swap-n').textContent='2 swaps left';
+  document.getElementById('swap-btn').disabled=true;
+  ['player-inner','comp-inner'].forEach(id=>{document.getElementById(id).classList.remove('flipped');});
+  ['player-slot','comp-slot'].forEach(id=>{document.getElementById(id).classList.remove('revealed','your-turn');});
+  document.getElementById('tm-hint').style.opacity='0';
   document.getElementById('dealer-deck').style.display='flex';
   document.getElementById('deal-btn').style.display='block';
   document.getElementById('gameover').classList.remove('open');
-  document.getElementById('go-win').style.display='none';
-  document.getElementById('go-lose').style.display='none';
-  const tb=document.getElementById('go-tomorrow-btn');
-  tb.textContent='🗓️ Play Tomorrow'; tb.disabled=false;
-  buildModGrid();
-  setStatus('Tap DEAL to begin!');
-
-  if (isMultiplayer) {
-    // Return to lobby for a new game
-    document.getElementById('game').style.display='none';
-    document.getElementById('live-bar').style.display='none';
-    document.getElementById('lobby').style.display='flex';
-    isMultiplayer=false;
-  }
+  buildModGrid();setStatus('Tap DEAL to begin!');
 }
 </script>
 </body>
