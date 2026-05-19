@@ -134,6 +134,17 @@ body {
   background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);
   border:1.5px solid rgba(255,255,255,0.12); margin-top:8px; font-size:16px;
 }
+.btn.join-pulse {
+  background:linear-gradient(135deg,#be185d,#ec4899) !important;
+  color:#fff !important; border:none !important;
+  box-shadow:0 4px 20px rgba(236,72,153,0.5) !important;
+  animation:join-glow 1.4s ease-in-out infinite !important;
+  font-size:22px !important;
+}
+@keyframes join-glow {
+  0%,100% { box-shadow:0 4px 20px rgba(236,72,153,0.5); transform:scale(1); }
+  50%      { box-shadow:0 4px 36px rgba(236,72,153,0.9),0 0 0 4px rgba(236,72,153,0.2); transform:scale(1.02); }
+}
 .divider {
   display:flex; align-items:center; gap:10px; margin:4px 0 10px;
 }
@@ -664,10 +675,10 @@ body {
   <div class="panel" style="display:none" id="multi-panel">
     <div class="panel-title">LIVE TABLE</div>
     <input class="inp" id="mp-name" type="text" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
-    <button class="btn primary" onclick="doCreate()">🃏 CREATE ROOM</button>
+    <button class="btn ghost" id="create-btn" onclick="doCreate()">🃏 CREATE ROOM</button>
     <div class="divider"><hr><span>OR JOIN</span><hr></div>
     <input class="inp code-inp" id="join-code" type="text" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
-    <button class="btn ghost" onclick="doJoin()">JOIN ROOM</button>
+    <button class="btn primary" id="join-btn" onclick="doJoin()">JOIN ROOM</button>
     <div class="err" id="lobby-err"></div>
   </div>
 </div>
@@ -1028,16 +1039,27 @@ window.addEventListener('DOMContentLoaded',()=>{
   const urlParams = new URLSearchParams(location.search);
   const joinCode = urlParams.get('join');
   if(joinCode){
-    // Pre-select Live Table mode and fill in the code
     setTimeout(()=>{
       setMode('multi');
       document.getElementById('mode-multi').classList.add('active');
       document.getElementById('mode-solo').classList.remove('active');
       document.getElementById('join-code').value = joinCode.toUpperCase().slice(0,4);
-      document.getElementById('waiting-sub') && null;
-      // Highlight the join field
-      setTimeout(()=>document.getElementById('join-code').focus(), 3000);
-    }, 3100); // after splash
+
+      // Make JOIN button pink + pulsing, dim CREATE
+      const joinBtn   = document.getElementById('join-btn');
+      const createBtn = document.getElementById('create-btn');
+      if(joinBtn){
+        joinBtn.classList.add('join-pulse');
+        joinBtn.textContent = '👉 JOIN ROOM — TAP HERE!';
+      }
+      if(createBtn){
+        createBtn.style.opacity='0.25';
+        createBtn.style.pointerEvents='none';
+      }
+
+      // Focus name field so they just type name and tap join
+      setTimeout(()=>document.getElementById('mp-name').focus(), 3100);
+    }, 3100);
   }
   const card=document.getElementById('splash-card');
   card.animate([{transform:'scale(0.1) rotate(-180deg)',opacity:0},{transform:'scale(1.08) rotate(8deg)',opacity:1,offset:0.65},{transform:'scale(1) rotate(0)',opacity:1}],{duration:1300,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'forwards'});
@@ -1247,6 +1269,7 @@ function leaveRoom(){
 //  ENTER MULTIPLAYER GAME
 // ══════════════════════════════════════════════════════
 let lastHandledRound = -1; // prevent double-handling same round
+let lastSwapTs = 0;          // prevent double-handling same swap
 
 function enterMPGame(room){
   if(document.getElementById('game').style.display==='flex')return;
@@ -1296,6 +1319,13 @@ function enterMPGame(room){
     renderMPScoreboard();
     updateTurnBanner();
     updateLiveCount();
+
+    // A swap happened — show popup on ALL screens
+    const sw=r.lastSwap;
+    if(sw && sw.ts && sw.ts !== lastSwapTs){
+      lastSwapTs = sw.ts;
+      showSwapAnnounce(sw.byName, sw.from, sw.byId===myId);
+    }
 
     // A mod was picked — show result on ALL screens
     const rs=r.roundState;
@@ -1516,6 +1546,39 @@ function lockMods(locked){
   document.querySelectorAll('.mod-cell').forEach(c=>{
     c.classList.toggle('locked', locked && !c.classList.contains('used'));
   });
+}
+
+// ══════════════════════════════════════════════════════
+//  SWAP ANNOUNCEMENT — shown to all players
+// ══════════════════════════════════════════════════════
+function showSwapAnnounce(byName, fromName, isMe){
+  const el  = document.getElementById('mod-announce');
+  const bar = document.getElementById('ma-bar');
+
+  document.getElementById('ma-player').textContent = isMe ? 'YOU' : byName.toUpperCase();
+  document.getElementById('ma-chose').textContent  = 'STOLE';
+  document.getElementById('ma-icon').textContent   = '🃏';
+  document.getElementById('ma-rule').textContent   = fromName.toUpperCase() + "'S CARD!";
+
+  // Swap sound
+  sfxSwap();
+
+  el.classList.remove('out'); el.classList.add('show');
+  setTimeout(()=>bar.classList.add('filling'), 50);
+  setTimeout(()=>{
+    el.classList.add('out');
+    bar.classList.remove('filling');
+    bar.style.transition='none'; bar.style.width='0';
+    setTimeout(()=>{ el.classList.remove('show','out'); bar.style.transition=''; }, 400);
+  }, 2000);
+}
+
+// Also show local swap toast for the swapper
+function showLocalSwapToast(oppName){
+  const t=document.getElementById('swap-toast');
+  document.getElementById('swap-toast-txt').textContent=`Stole ${oppName}'s card!`;
+  t.classList.remove('out'); t.classList.add('show');
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.classList.remove('show','out'),250); }, 1800);
 }
 
 // ══════════════════════════════════════════════════════
@@ -2006,14 +2069,12 @@ function doSwap(){
     const oppName = mpPlayers[targetPid]?.name || 'opponent';
     setStatus(`🃏 Stole ${oppName}'s card! Now pick your stat...`);
 
-    const t=document.getElementById('swap-toast');
-    document.getElementById('swap-toast-txt').textContent=`Stole ${oppName}'s card!`;
-    t.classList.remove('out'); t.classList.add('show');
-    setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.classList.remove('show','out'),250); }, 1800);
-
-    // Write swap to Firebase so others see it
-    db.ref('rooms/'+roomCode+'/swaps/'+myId).set({
-      from: targetPid, cardName: targetCard.name, round: roundNum, ts: Date.now()
+    // Broadcast swap to ALL players via Firebase
+    db.ref('rooms/'+roomCode+'/lastSwap').set({
+      byId:   myId,
+      byName: myName,
+      from:   oppName,
+      ts:     Date.now()
     });
     return;
   }
