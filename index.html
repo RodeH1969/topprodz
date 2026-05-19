@@ -199,6 +199,21 @@ body {
   font-size:13px; font-weight:700; letter-spacing:1px;
   padding:10px 24px; border-radius:20px; cursor:pointer;
 }
+#invite-btn {
+  width:100%; padding:14px;
+  background:linear-gradient(135deg,#1d4ed8,#2563eb);
+  color:#fff; border:none;
+  font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px;
+  border-radius:14px; cursor:pointer;
+  box-shadow:0 4px 20px rgba(37,99,235,0.45);
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  transition:transform 0.1s;
+}
+#invite-btn:active { transform:scale(0.97); }
+#invite-btn.copied {
+  background:linear-gradient(135deg,#15803d,#16a34a);
+  box-shadow:0 4px 20px rgba(22,163,74,0.45);
+}
 
 /* ── GAME SCREEN ── */
 #game { display:none; flex-direction:column; max-width:420px; margin:0 auto; padding:0 10px 16px; min-height:100vh; }
@@ -624,6 +639,7 @@ body {
   <div id="player-list"></div>
   <div class="spinner" id="w-spinner" style="display:none"></div>
   <button id="start-btn" onclick="hostStart()">🚀 START GAME</button>
+  <button id="invite-btn" onclick="doInvite()">📲 INVITE FRIEND</button>
   <button id="leave-btn" onclick="leaveRoom()">← Leave</button>
 </div>
 
@@ -999,6 +1015,29 @@ function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
 // ══════════════════════════════════════════════════════
 //  WAITING ROOM
 // ══════════════════════════════════════════════════════
+function doInvite(){
+  const url = location.origin + location.pathname;
+  const text = `🛒 Join my TOP PROD game!
+
+Go to: ${url}
+Tap Live Table → Join Room → enter code: ${roomCode}
+
+Battle of the Brands — let's go! 🃏`;
+  const btn = document.getElementById('invite-btn');
+  if(navigator.share){
+    navigator.share({ title:'TOP PROD — Join my game!', text, url }).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(text).then(()=>{
+      btn.textContent='✅ COPIED — SEND TO YOUR MATE!';
+      btn.classList.add('copied');
+      setTimeout(()=>{
+        btn.innerHTML='📲 INVITE FRIEND';
+        btn.classList.remove('copied');
+      }, 2500);
+    });
+  }
+}
+
 function enterWaiting(){
   document.getElementById('lobby').style.display='none';
   document.getElementById('waiting').style.display='flex';
