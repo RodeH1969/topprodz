@@ -511,6 +511,48 @@ body {
 #swap-toast-icon { font-size:42px; }
 #swap-toast-txt  { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:#fff; }
 
+/* ── MOD ANNOUNCEMENT OVERLAY ── */
+#mod-announce {
+  position:fixed; inset:0; z-index:165;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.92); backdrop-filter:blur(12px);
+  opacity:0; pointer-events:none;
+  transition:opacity 0.3s;
+  gap:16px; padding:32px; text-align:center;
+}
+#mod-announce.show { opacity:1; pointer-events:all; }
+#mod-announce.out  { opacity:0; pointer-events:none; transition:opacity 0.4s; }
+#ma-player {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(14px,4vw,18px); font-weight:900; letter-spacing:3px;
+  text-transform:uppercase; color:rgba(255,255,255,0.5);
+}
+#ma-chose {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(12px,3.5vw,15px); font-weight:700; letter-spacing:2px;
+  text-transform:uppercase; color:rgba(255,255,255,0.35);
+}
+#ma-icon { font-size:clamp(56px,18vw,88px); line-height:1; }
+#ma-rule {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(32px,10vw,52px); letter-spacing:4px;
+  color:var(--yellow);
+  text-shadow:0 0 30px rgba(255,215,0,0.6);
+  animation:ma-pulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes ma-pulse {
+  from { transform:scale(1);   text-shadow:0 0 20px rgba(255,215,0,0.4); }
+  to   { transform:scale(1.04);text-shadow:0 0 40px rgba(255,215,0,0.9); }
+}
+#ma-bar {
+  width:0; height:4px;
+  background:linear-gradient(90deg, var(--orange), var(--yellow));
+  border-radius:2px;
+  transition:width 1.8s linear;
+  max-width:240px;
+}
+#ma-bar.filling { width:240px; }
+
 /* ── ROUND RESULT OVERLAY ── */
 #result-overlay {
   position:fixed; inset:0; z-index:170;
@@ -737,6 +779,15 @@ body {
   </div>
 
 </div><!-- /game -->
+
+<!-- MOD ANNOUNCEMENT OVERLAY -->
+<div id="mod-announce">
+  <div id="ma-player">RODEY</div>
+  <div id="ma-chose">CHOSE</div>
+  <div id="ma-icon">🌾</div>
+  <div id="ma-rule">LOWEST FIBRE</div>
+  <div id="ma-bar"></div>
+</div>
 
 <!-- SWAP TOAST -->
 <div id="swap-toast">
@@ -1219,7 +1270,11 @@ function enterMPGame(room){
   document.getElementById('live-bar').style.display='flex';
   document.getElementById('scoreboard').style.display='flex';
   document.getElementById('turn-banner').style.display='block';
-  document.getElementById('swap-area').style.display='none';
+  document.getElementById('swap-area').style.display='flex';
+  swapsLeft=2;
+  document.getElementById('swap-n').textContent='2 swaps left';
+  document.getElementById('swap-btn').disabled=true;
+  document.getElementById('swap-hint').textContent='Steal an opponent\'s card!';
   document.getElementById('live-room').textContent=roomCode;
   document.getElementById('my-label').textContent=myName;
   document.getElementById('my-stack-lbl').textContent=myName+"'s Stack";
@@ -1433,10 +1488,12 @@ function showMPRound(roundNum, room){
       document.getElementById('player-slot').classList.add('your-turn');
       canInteract=true;
       lockMods(false);
+      if(swapsLeft>0) document.getElementById('swap-btn').disabled=false;
       setStatus('⚡ YOUR TURN — pick a battle rule!');
     } else {
       canInteract=false;
       lockMods(true);
+      document.getElementById('swap-btn').disabled=true;
       const name=mpPlayers[activePid]?.name||'Player';
       setStatus(`⏳ ${name} is picking the battle rule...`);
     }
@@ -1490,6 +1547,43 @@ async function mpPickMod(mod){
 // ══════════════════════════════════════════════════════
 //  SHOW ROUND RESULT — fires on ALL players via listener
 // ══════════════════════════════════════════════════════
+function showModAnnounce(playerName, mod, onDone){
+  const el    = document.getElementById('mod-announce');
+  const bar   = document.getElementById('ma-bar');
+  document.getElementById('ma-player').textContent = playerName.toUpperCase();
+  document.getElementById('ma-chose').textContent  = 'CHOSE';
+  document.getElementById('ma-icon').textContent   = mod.icon;
+  document.getElementById('ma-rule').textContent   = mod.label.toUpperCase();
+
+  // Sound: dramatic low hit + rising sting
+  try{
+    const ctx=getCtx(), t=ctx.currentTime;
+    // Thud
+    const o=ctx.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(40,t+0.3);
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.6,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+0.4);
+    // Rising sting
+    const o2=ctx.createOscillator(); o2.type='triangle';
+    o2.frequency.setValueAtTime(300,t+0.1); o2.frequency.exponentialRampToValueAtTime(660,t+0.5);
+    const g2=ctx.createGain(); g2.gain.setValueAtTime(0,t+0.1); g2.gain.linearRampToValueAtTime(0.35,t+0.2);
+    g2.gain.exponentialRampToValueAtTime(0.001,t+0.6);
+    o2.connect(g2); g2.connect(ctx.destination); o2.start(t+0.1); o2.stop(t+0.65);
+  }catch(e){}
+
+  el.classList.remove('out'); el.classList.add('show');
+  // Start progress bar
+  setTimeout(()=>bar.classList.add('filling'), 50);
+
+  // Hold for 2s then dismiss
+  setTimeout(()=>{
+    el.classList.add('out');
+    bar.classList.remove('filling');
+    bar.style.transition='none'; bar.style.width='0';
+    setTimeout(()=>{ el.classList.remove('show','out'); bar.style.transition=''; onDone(); }, 400);
+  }, 2100);
+}
+
 function showRoundResult(rs, room){
   const mod = [...MOD_SET_A,...MOD_SET_B].find(m=>m.id===rs.modId && m.type===rs.modType);
   if(!mod) return;
@@ -1505,6 +1599,13 @@ function showRoundResult(rs, room){
       c.classList.add('used');
     }
   });
+
+  // Show announcement popup first, then resolve
+  const pickerName = mpPlayers[rs.pickedBy]?.name || 'Player';
+  showModAnnounce(pickerName, mod, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
+}
+
+function resolveRound(rs, room, mod, allHands, allScores, roundNum){
 
   // Get each player's card for this round
   const cardValues={};
@@ -1852,6 +1953,49 @@ function buildCardFace(who,product){
 
 function doSwap(){
   if(!canInteract||swapsLeft<=0||!activePlayer)return;
+
+  if(isMP){
+    // MP swap: steal a random opponent's card for this round
+    // Pick a random opponent who has a card this round
+    const roundNum = currentTurnIdx;
+    const opponents = mpTurnOrder.filter(pid=>pid!==myId);
+    if(opponents.length===0) return;
+    const targetPid = opponents[Math.floor(Math.random()*opponents.length)];
+    const targetHandNames = mpHands[targetPid]||[];
+    const targetCardName = targetHandNames[roundNum];
+    const targetCard = ALL_PRODUCTS.find(p=>p.name===targetCardName);
+    if(!targetCard) return;
+
+    swapsLeft--;sfxSwap();
+    document.getElementById('swap-n').textContent=swapsLeft+' swaps left';
+    document.getElementById('swap-btn').disabled=true;
+
+    // Swap my active card with their card
+    const myOldCard = activePlayer;
+    activePlayer = targetCard;
+
+    // Rebuild my card display
+    buildCardFace('player', activePlayer);
+    const pi=document.getElementById('player-inner');
+    pi.style.transition='none'; pi.classList.remove('flipped');
+    setTimeout(()=>{ pi.style.transition=''; pi.classList.add('flipped'); }, 100);
+
+    const oppName = mpPlayers[targetPid]?.name || 'opponent';
+    setStatus(`🃏 Stole ${oppName}'s card! Now pick your stat...`);
+
+    const t=document.getElementById('swap-toast');
+    document.getElementById('swap-toast-txt').textContent=`Stole ${oppName}'s card!`;
+    t.classList.remove('out'); t.classList.add('show');
+    setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.classList.remove('show','out'),250); }, 1800);
+
+    // Write swap to Firebase so others see it
+    db.ref('rooms/'+roomCode+'/swaps/'+myId).set({
+      from: targetPid, cardName: targetCard.name, round: roundNum, ts: Date.now()
+    });
+    return;
+  }
+
+  // Solo swap — original logic
   swapsLeft--;sfxSwap();
   document.getElementById('swap-n').textContent=swapsLeft+' swaps left';
   document.getElementById('swap-btn').disabled=true;
