@@ -182,9 +182,35 @@ body {
   font-size:15px; font-weight:700; letter-spacing:0.5px;
 }
 .p-entry.me { border-color:rgba(59,130,246,0.35); background:rgba(59,130,246,0.07); }
+.p-entry.new-arrival {
+  border-color:rgba(74,222,128,0.6) !important;
+  background:rgba(74,222,128,0.1) !important;
+  animation:arrival-flash 0.5s ease-in-out 4;
+}
+@keyframes arrival-flash {
+  0%,100% { border-color:rgba(74,222,128,0.3); background:rgba(74,222,128,0.05); }
+  50%     { border-color:rgba(74,222,128,1);   background:rgba(74,222,128,0.22); box-shadow:0 0 16px rgba(74,222,128,0.4); }
+}
 .p-entry .pe-tag {
   margin-left:auto; font-size:9px; letter-spacing:1px;
   color:var(--yellow); font-weight:900;
+}
+/* Room code pulse when new player joins */
+#room-code.new-join {
+  animation:code-pulse 0.4s ease-in-out 3;
+}
+@keyframes code-pulse {
+  0%,100% { text-shadow:0 0 40px rgba(255,215,0,0.4); }
+  50%     { text-shadow:0 0 60px rgba(74,222,128,1), 0 0 100px rgba(74,222,128,0.5); color:#4ade80; }
+}
+/* Knock sound visual — waiting-sub flash */
+#waiting-sub.player-joined {
+  color:var(--green) !important;
+  animation:sub-flash 0.3s ease-in-out 3;
+}
+@keyframes sub-flash {
+  0%,100% { opacity:1; }
+  50%     { opacity:0.3; }
 }
 .spinner {
   width:32px; height:32px;
@@ -1204,17 +1230,60 @@ function enterWaiting(){
     ?'Share this code with friends to join'
     :'Waiting for host to start...';
 
+  let prevPlayerCount = 1; // track to detect new arrivals
+
   roomRef=db.ref('rooms/'+roomCode);
   roomRef.on('value',snap=>{
     if(!snap.exists()){leaveRoom();return;}
     const room=snap.val();
     mpPlayers=room.players||{};
-    renderWaiting(mpPlayers);
-    if(amHost){
-      const n=Object.keys(mpPlayers).length;
-      document.getElementById('waiting-sub').textContent=
-        n===1?'Waiting for players — or start solo vs TM':n+' players ready!';
+    const n=Object.keys(mpPlayers).length;
+
+    // Detect new player joining — notify host
+    if(amHost && n > prevPlayerCount){
+      const newPids=Object.keys(mpPlayers).filter(pid=>pid!==myId);
+      const newestPid=newPids[newPids.length-1];
+      const newName=mpPlayers[newestPid]?.name||'Someone';
+
+      // Flash room code green
+      const codeEl=document.getElementById('room-code');
+      codeEl.classList.remove('new-join');
+      void codeEl.offsetWidth; // reflow to restart animation
+      codeEl.classList.add('new-join');
+      setTimeout(()=>codeEl.classList.remove('new-join'), 2000);
+
+      // Flash sub text
+      const subEl=document.getElementById('waiting-sub');
+      subEl.classList.remove('player-joined');
+      void subEl.offsetWidth;
+      subEl.classList.add('player-joined');
+      setTimeout(()=>subEl.classList.remove('player-joined'), 1500);
+
+      // Play a knock sound
+      sfxPlayerJoined();
+
+      // Temporarily show join message
+      subEl.textContent = `🟢 ${newName} just joined!`;
+      setTimeout(()=>{
+        subEl.classList.remove('player-joined');
+        subEl.textContent = n===1
+          ? 'Waiting for players — or start solo vs TM'
+          : n + ' players ready — hit START!';
+      }, 2500);
     }
+
+    prevPlayerCount = n;
+    renderWaiting(mpPlayers);
+
+    if(amHost && n > 1){
+      // Only update sub if not currently showing join message
+      setTimeout(()=>{
+        if(!document.getElementById('waiting-sub').classList.contains('player-joined')){
+          document.getElementById('waiting-sub').textContent = n + ' players ready — hit START!';
+        }
+      }, 2600);
+    }
+
     // Host started — everyone enters game
     if(room.status==='playing'){
       enterMPGame(room);
@@ -1222,19 +1291,28 @@ function enterWaiting(){
   });
 }
 
+let knownPlayerIds = new Set();
+
 function renderWaiting(players){
   const list=document.getElementById('player-list');
   list.innerHTML='';
   const pids=Object.keys(players);
-  pids.forEach(pid=>{
+  const isFirstRender = knownPlayerIds.size === 0;
+
+  pids.forEach((pid,idx)=>{
     const p=players[pid];
+    const isNew = !isFirstRender && !knownPlayerIds.has(pid) && pid !== myId;
     const div=document.createElement('div');
-    div.className='p-entry'+(pid===myId?' me':'');
-    div.innerHTML=`<span>${pid===myId?'🙋':'👤'}</span>
+    div.className='p-entry'+(pid===myId?' me':'')+(isNew?' new-arrival':'');
+    div.innerHTML=`<span>${pid===myId?'🙋':isNew?'🆕':'👤'}</span>
       <span>${p.name}${pid===myId?' (you)':''}</span>
-      <span class="pe-tag">${pid===pids[0]?'HOST':''}</span>`;
+      <span class="pe-tag">${idx===0?'HOST':''}</span>`;
     list.appendChild(div);
+    // Remove flash class after animation
+    if(isNew) setTimeout(()=>div.classList.remove('new-arrival'), 2500);
   });
+
+  knownPlayerIds = new Set(pids);
 }
 
 async function hostStart(){
@@ -1249,10 +1327,20 @@ async function hostStart(){
   }
   const turnOrder=shuffle(pids);
 
-  // Deal hands from daily shuffle — each player gets 5 cards
+  // Deal hands from daily shuffle — each player gets exactly 5 cards
   const shuffled=dailyShuffle(ALL_PRODUCTS);
   const hands={};
-  pids.forEach((pid,i)=>{hands[pid]=shuffled.slice(i*5,(i+1)*5).map(p=>p.name);});
+  pids.forEach((pid,i)=>{
+    // Give each player 5 cards as a cycling deck
+    // Store full deck (all 5 cards repeated enough to last many rounds)
+    const hand=shuffled.slice(i*5,(i+1)*5).map(p=>p.name);
+    // Repeat deck 20 times so game never runs out
+    hands[pid]=[...hand,...hand,...hand,...hand,
+                ...hand,...hand,...hand,...hand,
+                ...hand,...hand,...hand,...hand,
+                ...hand,...hand,...hand,...hand,
+                ...hand,...hand,...hand,...hand];
+  });
   const scores=Object.fromEntries(pids.map(p=>[p,5]));
 
   await roomRef.update({
@@ -1448,6 +1536,35 @@ function dealMPCards(room, onComplete){
   }, 600);
 }
 
+// Player joined waiting room — friendly knock
+function sfxPlayerJoined(){
+  try{
+    const ctx=getCtx(), t=ctx.currentTime;
+    // Two knocks
+    [0, 0.22].forEach(delay=>{
+      const buf=ctx.createBuffer(1,ctx.sampleRate*0.08,ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length)*0.8;
+      const s=ctx.createBufferSource(); s.buffer=buf;
+      const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.5,t+delay);
+      g.gain.exponentialRampToValueAtTime(0.001,t+delay+0.09);
+      s.connect(lp); lp.connect(g); g.connect(ctx.destination);
+      s.start(t+delay); s.stop(t+delay+0.1);
+    });
+    // Friendly rising ding
+    const o=ctx.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(520,t+0.35);
+    o.frequency.exponentialRampToValueAtTime(780,t+0.55);
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0,t+0.35);
+    g.gain.linearRampToValueAtTime(0.3,t+0.42);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.65);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t+0.35); o.stop(t+0.7);
+  }catch(e){}
+}
+
 // Deal intro sound — rising anticipation
 function sfxDealIntro(){
   try{
@@ -1492,7 +1609,9 @@ function showMPRound(roundNum, room){
   const myCard = ALL_PRODUCTS.find(p=>p.name===myHandNames[roundNum]);
 
   if(!myCard){
-    setStatus('You have no more cards — watching the game...');
+    // Should never happen with repeating deck, but safety net
+    console.warn('No card for round', roundNum, '— hand length:', myHandNames.length);
+    setStatus('Waiting...');
     canInteract=false;
     return;
   }
@@ -1776,18 +1895,16 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
         activePids.forEach(pid=>{ newScores[pid]=Math.max(0,(newScores[pid]||0)-1); });
         await roomRef.update({ scores:newScores, turn:newTurn, pile:newPile, roundState:null });
       }
+      // Update local scores immediately for all players
+      mpScores={...newScores};
     }, 5000);
   }
 
   // All players advance to next round after overlay
   setTimeout(()=>{
     const nextRound=roundNum+1;
-    // Check if game over
-    const activePids=mpTurnOrder.filter(pid=>(mpScores[pid]||0)>0 || cardValues[pid]);
-    const stillIn=activePids.filter(pid=>{
-      const hands=allHands[pid]||[];
-      return hands[nextRound]!==undefined;
-    });
+    // Game ends when only 1 player has cards left (score > 0)
+    const stillIn=mpTurnOrder.filter(pid=>(mpScores[pid]||0)>0);
     if(stillIn.length<=1){
       endMPGame(stillIn[0]||winners[0]);
       return;
