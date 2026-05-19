@@ -437,7 +437,7 @@ body {
 }
 
 /* mod grid */
-#mod-grid { flex:1; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:4px; min-height:106px; }
+#mod-grid { flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr); gap:5px; min-height:116px; }
 #mod-grid.remixing { animation:remix 0.7s ease-in-out; }
 @keyframes remix { 0%{opacity:1;filter:brightness(1);} 20%{opacity:0;filter:brightness(4);} 50%{opacity:1;filter:brightness(2.5);} 100%{opacity:1;filter:brightness(1);} }
 .mod-cell { cursor:pointer; border-radius:9px; position:relative; }
@@ -449,8 +449,8 @@ body {
   transition:background 0.12s; position:relative; overflow:hidden;
 }
 .mod-cell:not(.used):active .mod-inner { background:rgba(255,102,0,0.18); }
-.mod-icon { font-size:14px; line-height:1; }
-.mod-lbl { font-family:'Barlow Condensed',sans-serif; font-size:7px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.3px; text-align:center; line-height:1.2; }
+.mod-icon { font-size:20px; line-height:1; }
+.mod-lbl { font-family:'Barlow Condensed',sans-serif; font-size:9.5px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.3px; text-align:center; line-height:1.2; }
 .mod-stamp {
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,0.6); border-radius:8px;
@@ -856,9 +856,9 @@ body {
     <div class="rules-h">HOW TO PLAY</div>
     <div class="rules-step"><span class="rs-n">1</span><span class="rs-t">Each player gets <b>5 cards</b> from 77 real Aldi products — the same daily shuffle for everyone.</span></div>
     <div class="rules-step"><span class="rs-n">2</span><span class="rs-t">Your card flips face-up. Study your product's nutrition stats and price.</span></div>
-    <div class="rules-step"><span class="rs-n">3</span><span class="rs-t"><b>Solo:</b> Pick one of the 8 battle rules to play your card against the Trolley Master. <b>Live Table:</b> The active player picks the rule for that round — everyone battles at once!</span></div>
+    <div class="rules-step"><span class="rs-n">3</span><span class="rs-t"><b>Solo:</b> Pick one of the 6 battle rules to play your card against the Trolley Master. <b>Live Table:</b> The active player picks the rule — everyone battles at once!</span></div>
     <div class="rules-step"><span class="rs-n">4</span><span class="rs-t">Best stat wins <b>everyone's</b> card that round. Ties? Cards go to the pile — next winner takes them all.</span></div>
-    <div class="rules-step"><span class="rs-n">5</span><span class="rs-t">Rules get a <b>USED</b> stamp once played. After all 8 are used they <b>remix</b> with opposite directions.</span></div>
+    <div class="rules-step"><span class="rs-n">5</span><span class="rs-t">Rules get a <b>USED</b> stamp once played. After all 6 are used they <b>remix</b> with opposite directions.</span></div>
     <div class="rules-step"><span class="rs-n">6</span><span class="rs-t"><b>Solo:</b> First to empty the other's deck wins. <b>Live Table:</b> Last player with cards wins!</span></div>
     <hr class="rules-hr">
     <div class="rules-step" style="margin-top:12px"><span class="rs-n">🔄</span><span class="rs-t"><b>SWAP POWER</b> — Before picking a rule, swap your card with the Trolley Master's (solo only). 2 per game.</span></div>
@@ -993,22 +993,18 @@ const ALL_PRODUCTS = [
 const MOD_SET_A = [
   { id:"protein",       label:"Highest Protein",  icon:"💪", type:"high", unit:"g"  },
   { id:"sugars",        label:"Lowest Sugar",      icon:"🚫", type:"low",  unit:"g"  },
-  { id:"dietary_fibre", label:"Highest Fibre",     icon:"🌿", type:"high", unit:"g"  },
-  { id:"sodium",        label:"Lowest Sodium",     icon:"🧂", type:"low",  unit:"mg" },
-  { id:"fat",           label:"Lowest Fat",        icon:"🥗", type:"low",  unit:"g"  },
   { id:"energy_kj",     label:"Highest Energy",    icon:"⚡", type:"high", unit:"kJ" },
+  { id:"sodium",        label:"Lowest Sodium",     icon:"🧂", type:"low",  unit:"mg" },
   { id:"price",         label:"Lowest Price",      icon:"💰", type:"low",  unit:"$"  },
-  { id:"carbohydrate",  label:"Highest Carbs",     icon:"🍞", type:"high", unit:"g"  },
+  { id:"fat",           label:"Lowest Fat",        icon:"🥗", type:"low",  unit:"g"  },
 ];
 const MOD_SET_B = [
-  { id:"protein",       label:"Lowest Protein",   icon:"🤏", type:"low",  unit:"g"  },
-  { id:"sugars",        label:"Highest Sugar",    icon:"🍬", type:"high", unit:"g"  },
-  { id:"dietary_fibre", label:"Lowest Fibre",     icon:"🌾", type:"low",  unit:"g"  },
-  { id:"sodium",        label:"Highest Sodium",   icon:"🧂", type:"high", unit:"mg" },
-  { id:"fat",           label:"Highest Fat",      icon:"🧈", type:"high", unit:"g"  },
-  { id:"energy_kj",     label:"Lowest Energy",    icon:"😴", type:"low",  unit:"kJ" },
-  { id:"price",         label:"Highest Price",    icon:"💎", type:"high", unit:"$"  },
+  { id:"dietary_fibre", label:"Highest Fibre",    icon:"🌿", type:"high", unit:"g"  },
   { id:"carbohydrate",  label:"Lowest Carbs",     icon:"🥦", type:"low",  unit:"g"  },
+  { id:"price",         label:"Highest Price",    icon:"💎", type:"high", unit:"$"  },
+  { id:"saturated_fat", label:"Lowest Sat Fat",   icon:"❤️", type:"low",  unit:"g"  },
+  { id:"sugars",        label:"Highest Sugar",    icon:"🍬", type:"high", unit:"g"  },
+  { id:"protein",       label:"Lowest Protein",   icon:"🤏", type:"low",  unit:"g"  },
 ];
 
 // ══════════════════════════════════════════════════════
@@ -1619,7 +1615,7 @@ function showMPRound(roundNum, room){
   activePlayer = myCard;
 
   // Check if all mods used
-  const allUsed = document.querySelectorAll('.mod-cell.used').length===8;
+  const allUsed = document.querySelectorAll('.mod-cell.used').length===6;
   if(allUsed){
     setStatus('🔄 Rules remix!');
     setTimeout(()=>{
@@ -2087,7 +2083,7 @@ function startDeal(){
 function startRound(){
   if(isMP){startMPRound();return;}
   if(playerDeck.length===0||compDeck.length===0){endGame();return;}
-  const allUsed=document.querySelectorAll('.mod-cell.used').length===8;
+  const allUsed=document.querySelectorAll('.mod-cell.used').length===6;
   if(allUsed){setStatus('🔄 Rules remix!');setTimeout(()=>{buildModGrid(true);setStatus('⚡ New rules!');setTimeout(startRound,900);},600);return;}
   activePlayer=playerDeck.shift();
   activeComp=compDeck.shift();
