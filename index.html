@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <link rel="icon" type="image/x-icon" href="logo.ico">
-<meta property="og:title" content="TOP PROD — Battle of the Brands!">
+<meta property="og:title" content="TOP PROD — Battle of the Product Stats!">
 <meta property="og:description" content="A daily nutrition card battle game.">
 <meta property="og:image" content="https://topprodz.onrender.com/logo.png">
 <meta property="og:url" content="https://topprodz.onrender.com">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>TOP PROD: Battle of the Brands</title>
+<title>TOP PROD: Battle of the Product Stats</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -672,14 +672,14 @@ body {
 <div id="splash">
   <div id="splash-card"><img src="logo.png" alt="TOP PROD" onerror="this.style.display='none'"></div>
   <div id="splash-title">TOP PROD</div>
-  <div id="splash-sub">Battle of the Brands</div>
+  <div id="splash-sub">Battle of the Product Stats</div>
 </div>
 
 <!-- LOBBY -->
 <div id="lobby">
   <div class="lobby-logo"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
   <div id="lobby-title">TOP PROD</div>
-  <div id="lobby-sub">Battle of the Brands</div>
+  <div id="lobby-sub">Battle of the Product Stats</div>
 
   <div class="mode-row">
     <div class="mode-btn active" id="mode-solo" onclick="setMode('solo')">
@@ -1200,7 +1200,7 @@ ${url}
 Or go to: ${location.origin + location.pathname}
 Tap Live Table → Join Room → enter code: ${roomCode}
 
-Battle of the Brands — let's go! 🃏`;
+Battle of the Product Stats — let's go! 🃏`;
   const btn = document.getElementById('invite-btn');
   if(navigator.share){
     navigator.share({ title:'TOP PROD — Join my game!', text, url }).catch(()=>{});
