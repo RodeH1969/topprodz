@@ -1440,8 +1440,9 @@ function sfxDealIntro(){
 //  SHOW A ROUND (called on enter + after each result)
 // ══════════════════════════════════════════════════════
 function showMPRound(roundNum, room){
-  const allHands = room ? (room.hands||{}) : mpHands;
-  const scores   = room ? (room.scores||{}) : mpScores;
+  // If no room data passed, use cached mpHands (already populated on game enter)
+  const allHands = (room && room.hands) ? room.hands : mpHands;
+  const scores   = (room && room.scores) ? room.scores : mpScores;
 
   // My card for this round
   const myHandNames = (allHands[myId]||[]);
@@ -1459,7 +1460,16 @@ function showMPRound(roundNum, room){
   const allUsed = document.querySelectorAll('.mod-cell.used').length===8;
   if(allUsed){
     setStatus('🔄 Rules remix!');
-    setTimeout(()=>{ buildModGrid(true); setTimeout(()=>showMPRound(roundNum, null), 900); }, 600);
+    setTimeout(()=>{
+      buildModGrid(true);
+      setTimeout(()=>{
+        // Fetch fresh room data after remix so hands/scores are current
+        db.ref('rooms/'+roomCode).once('value').then(snap=>{
+          if(snap.exists()) showMPRound(roundNum, snap.val());
+          else showMPRound(roundNum, null);
+        });
+      }, 900);
+    }, 600);
     return;
   }
 
@@ -1605,7 +1615,10 @@ function showRoundResult(rs, room){
   showModAnnounce(pickerName, mod, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
 }
 
-function resolveRound(rs, room, mod, allHands, allScores, roundNum){
+function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
+  // Always use freshest data available
+  const allHands  = (allHandsIn  && Object.keys(allHandsIn).length>0)  ? allHandsIn  : mpHands;
+  const allScores = (allScoresIn && Object.keys(allScoresIn).length>0) ? allScoresIn : mpScores;
 
   // Get each player's card for this round
   const cardValues={};
@@ -1810,7 +1823,17 @@ function showMPResult(type,emoji,headline,detail,scores){
 // ══════════════════════════════════════════════════════
 function buildModGrid(remixing=false){
   const src=modSetToggle?MOD_SET_B:MOD_SET_A;
-  currentMods=shuffle(src);
+  // In MP use seeded shuffle (daily seed + modSetToggle count) so ALL players get identical grid
+  // In solo use random shuffle
+  if(isMP){
+    const seed=getBrisbaneSeed()+(modSetToggle?1:0)*999;
+    const rng=seededRng(seed);
+    const a=[...src];
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    currentMods=a;
+  } else {
+    currentMods=shuffle(src);
+  }
   modSetToggle=!modSetToggle;
   const grid=document.getElementById('mod-grid');
   if(remixing){grid.classList.add('remixing');sfxBoxReveal();setTimeout(()=>{grid.classList.remove('remixing');renderMods(grid);},700);}
