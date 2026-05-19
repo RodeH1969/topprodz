@@ -1142,7 +1142,20 @@ async function doJoin(){
       }
     }
 
-    const count=Object.keys(room.players||{}).length;
+    const existingPlayers = room.players||{};
+    const count = Object.keys(existingPlayers).length;
+
+    // Check if same name already in room — reuse that slot instead of adding duplicate
+    const existingEntry = Object.entries(existingPlayers).find(([,p])=>
+      p.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if(existingEntry){
+      // Rejoin as that player — reuse their ID
+      myName=name; myId=existingEntry[0]; amHost=false; roomCode=code;
+      enterWaiting();
+      return;
+    }
+
     if(count>=5){setErr('Room is full (max 5 players)');return;}
     myName=name; myId=uid(); amHost=false; roomCode=code;
     await db.ref('rooms/'+code+'/players/'+myId).set({name:myName,cards:0});
