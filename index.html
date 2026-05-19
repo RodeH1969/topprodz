@@ -1271,7 +1271,18 @@ function joinWaitingRoom() {
   document.getElementById('lobby').style.display   = 'none';
   document.getElementById('waiting').style.display = 'flex';
   document.getElementById('room-code-display').textContent = myRoomCode;
-  document.getElementById('waiting-start-btn').style.display = amHost ? 'block' : 'none';
+
+  // Always hide spinner initially
+  document.getElementById('waiting-spinner').style.display = 'none';
+
+  // Host sees start button immediately
+  if (amHost) {
+    document.getElementById('waiting-start-btn').style.display = 'block';
+    document.getElementById('waiting-sub').textContent = 'Share this code — or start now to play vs TM';
+  } else {
+    document.getElementById('waiting-sub').textContent = 'Waiting for host to start...';
+    document.getElementById('waiting-spinner').style.display = 'block';
+  }
 
   // Listen for room changes
   roomRef = db.ref('rooms/' + myRoomCode);
@@ -1283,11 +1294,12 @@ function joinWaitingRoom() {
     // Update waiting room player list
     renderWaitingPlayers(mpPlayers);
 
-    // Host can start if 2+ players
+    // Update sub text with player count for host
     if (amHost) {
       const count = Object.keys(mpPlayers).length;
-      document.getElementById('waiting-start-btn').style.display = count >= 2 ? 'block' : 'none';
-      document.getElementById('waiting-spinner').style.display   = count >= 2 ? 'none' : 'block';
+      document.getElementById('waiting-sub').textContent =
+        count === 1 ? 'Share this code — or start now to play vs TM'
+                    : count + ' players ready — hit START!';
     }
 
     // Game started — enter game
