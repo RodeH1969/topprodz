@@ -772,10 +772,9 @@ body {
     <div class="rules-step"><span class="rs-n">4</span><span class="rs-t">Best stat wins <b>everyone's</b> card that round. Ties? Cards go to the pile — next winner takes them all.</span></div>
     <div class="rules-step"><span class="rs-n">5</span><span class="rs-t">Rules get a <b>USED</b> stamp once played. After all 8 are used they <b>remix</b> with opposite directions.</span></div>
     <div class="rules-step"><span class="rs-n">6</span><span class="rs-t"><b>Solo:</b> First to empty the other's deck wins. <b>Live Table:</b> Last player with cards wins!</span></div>
-    <div class="rules-hr">
+    <hr class="rules-hr">
     <div class="rules-step" style="margin-top:12px"><span class="rs-n">🔄</span><span class="rs-t"><b>SWAP POWER</b> — Before picking a rule, swap your card with the Trolley Master's (solo only). 2 per game.</span></div>
     <button class="rules-play-btn" onclick="closeRules()">GOT IT — LET'S PLAY!</button>
-  </div>
 </div>
 
 <!-- GAME OVER -->
@@ -1155,6 +1154,13 @@ function renderWaiting(players){
 async function hostStart(){
   if(!amHost)return;
   const pids=Object.keys(mpPlayers);
+  if(pids.length<2){
+    document.getElementById('waiting-sub').textContent='⚠️ Need at least 1 more player to start!';
+    setTimeout(()=>{
+      document.getElementById('waiting-sub').textContent='Share the code — waiting for players...';
+    },3000);
+    return;
+  }
   const turnOrder=shuffle(pids);
 
   // Deal hands from daily shuffle — each player gets 5 cards
@@ -1222,7 +1228,6 @@ function enterMPGame(room){
   renderMPScoreboard();
   renderOpponents();
   updateTurnBanner();
-  setStatus('Game on! Cards dealt — get ready!');
 
   // ── SINGLE Firebase listener — source of truth ──
   roomRef.on('value', snap=>{
@@ -1245,8 +1250,135 @@ function enterMPGame(room){
     }
   });
 
-  // Start first round
-  setTimeout(()=>showMPRound(room.turn||0, room), 800);
+  // Deal theatre first, then start round
+  dealMPCards(room, ()=>showMPRound(room.turn||0, room));
+}
+
+// ══════════════════════════════════════════════════════
+//  MP DEAL THEATRE — cards fly to each player's stack
+// ══════════════════════════════════════════════════════
+function dealMPCards(room, onComplete){
+  const playerCount = mpTurnOrder.length;
+  const cardsPerPlayer = 5;
+
+  // Show the dealer deck
+  const deckEl = document.getElementById('dealer-deck');
+  const dealBtn = document.getElementById('deal-btn');
+  deckEl.style.display = 'flex';
+  dealBtn.style.display = 'none';
+
+  setStatus('🃏 Dealing cards...');
+
+  // Brief pause then start dealing
+  setTimeout(()=>{
+    // Play a drumroll-style build-up sound
+    sfxDealIntro();
+
+    const dealerRect = document.getElementById('pile-box').getBoundingClientRect();
+    const playerStackEl = document.getElementById('player-count').closest('.stack-box');
+
+    // Build deal sequence: alternate between my stack and each opponent
+    // Total cards dealt visually = 5 per player
+    let dealQueue = [];
+    for(let card=0; card<cardsPerPlayer; card++){
+      mpTurnOrder.forEach(pid=>{
+        dealQueue.push(pid);
+      });
+    }
+
+    let i = 0;
+    let myCardCount = 0;
+    let oppCardCounts = {};
+    mpTurnOrder.forEach(pid=>{ if(pid!==myId) oppCardCounts[pid]=0; });
+
+    const interval = setInterval(()=>{
+      if(i >= dealQueue.length){
+        clearInterval(interval);
+        // Hide dealer deck
+        deckEl.style.display = 'none';
+        // Update all counts to final values
+        document.getElementById('player-count').textContent = cardsPerPlayer;
+        mpTurnOrder.forEach(pid=>{
+          if(pid===myId) return;
+          const el = document.getElementById('opp-count-'+pid);
+          if(el) el.textContent = cardsPerPlayer + ' cards';
+        });
+        setStatus('✅ Cards dealt — game begins!');
+        setTimeout(onComplete, 600);
+        return;
+      }
+
+      const targetPid = dealQueue[i];
+      let targetEl;
+
+      if(targetPid === myId){
+        myCardCount++;
+        targetEl = playerStackEl;
+        // Update count live
+        document.getElementById('player-count').textContent = myCardCount;
+      } else {
+        oppCardCounts[targetPid] = (oppCardCounts[targetPid]||0) + 1;
+        // Target the opponent's card slot
+        const oppSlot = document.getElementById('opp-'+targetPid);
+        targetEl = oppSlot ? oppSlot.querySelector('.opp-slot') : null;
+        // Update opp count live
+        const countEl = document.getElementById('opp-count-'+targetPid);
+        if(countEl) countEl.textContent = oppCardCounts[targetPid] + ' cards';
+      }
+
+      if(targetEl){
+        const tRect = targetEl.getBoundingClientRect();
+        const el = document.createElement('div');
+        el.className = 'deal-anim';
+        el.innerHTML = '<img src="logo.png" alt="">';
+        el.style.left = (dealerRect.left + dealerRect.width/2 - 23) + 'px';
+        el.style.top  = (dealerRect.top + window.scrollY + dealerRect.height/2 - 34) + 'px';
+        document.body.appendChild(el);
+
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          el.style.left = (tRect.left + tRect.width/2 - 23) + 'px';
+          el.style.top  = (tRect.top + window.scrollY + tRect.height/2 - 34) + 'px';
+          el.style.transform = 'rotate(' + (Math.random()*16-8) + 'deg)';
+        }));
+
+        sfxCardSwish(0);
+        setTimeout(()=>el.remove(), 460);
+      }
+
+      i++;
+    }, 160); // slightly faster than solo for more players
+  }, 600);
+}
+
+// Deal intro sound — rising anticipation
+function sfxDealIntro(){
+  try{
+    const ctx=getCtx();
+    // Shuffling noise burst
+    for(let i=0;i<6;i++){
+      const t=ctx.currentTime+i*0.08;
+      const buf=ctx.createBuffer(1,ctx.sampleRate*0.07,ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let j=0;j<d.length;j++) d[j]=(Math.random()*2-1)*(1-j/d.length);
+      const s=ctx.createBufferSource(); s.buffer=buf;
+      const bp=ctx.createBiquadFilter(); bp.type='bandpass';
+      bp.frequency.value=1200+i*200; bp.Q.value=2;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.18,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.07);
+      s.connect(bp); bp.connect(g); g.connect(ctx.destination);
+      s.start(t); s.stop(t+0.08);
+    }
+    // Rising tone sweep
+    const osc=ctx.createOscillator(); osc.type='sine';
+    osc.frequency.setValueAtTime(220,ctx.currentTime+0.3);
+    osc.frequency.exponentialRampToValueAtTime(440,ctx.currentTime+0.8);
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0,ctx.currentTime+0.3);
+    g.gain.linearRampToValueAtTime(0.2,ctx.currentTime+0.5);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.9);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(ctx.currentTime+0.3); osc.stop(ctx.currentTime+1.0);
+  }catch(e){}
 }
 
 // ══════════════════════════════════════════════════════
@@ -1481,7 +1613,7 @@ function endMPGame(winnerPid){
   document.getElementById('go-title').style.color = won?'#4ade80':'#f87171';
   const winnerName = mpPlayers[winnerPid]?.name||'Someone';
   document.getElementById('go-sub').textContent = won
-    ? 'Last player standing — you emptied everyone's cart!'
+    ? 'Last player standing — you emptied everyone\'s cart!'
     : `${winnerName} was the last one standing!`;
   won ? sfxJackpot() : sfxGameLose();
   document.getElementById('gameover').classList.add('open');
