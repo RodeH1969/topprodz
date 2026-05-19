@@ -1693,10 +1693,28 @@ function endGame(){
 }
 
 function doShare(){
-  const sq=roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
-  const text=`🛒 TOP PROD — ${getDailyStr()}\n\n${roundHistory.filter(r=>r==='w').length} wins vs TM!\n${sq}\n\n👉 ${location.href}`;
-  if(navigator.share)navigator.share({title:'TOP PROD',text,url:location.href}).catch(()=>{});
-  else navigator.clipboard.writeText(text).then(()=>{const b=document.querySelector('.go-btn.share');b.textContent='✅ Copied!';setTimeout(()=>b.textContent='📣 Share Result',2500);});
+  const url = location.origin + location.pathname;
+  let text;
+
+  if(isMP){
+    const playerCount = mpTurnOrder.length;
+    const rematch = roomCode ? `\n\nRematch? Room ${roomCode} is still open 👇\n${url}?join=${roomCode}` : `\n\n👉 ${url}`;
+    text = `🛒 TOP PROD — ${getDailyStr()}\n\n🏆 Just wiped the floor with ${playerCount-1} mate${playerCount>2?'s':''} in a Live Table!\n\nLast player standing — emptied everyone's cart!\n\nThink you can beat me?${rematch}`;
+  } else {
+    const wins = roundHistory.filter(r=>r==='w').length;
+    const sq = roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
+    text = `🛒 TOP PROD — ${getDailyStr()}\n\n${wins} wins vs the Trolley Master!\n${sq}\n\n🟩 My wins  🟥 TM wins  🟦 Tie\n\nCan you do better? 👉 ${url}`;
+  }
+
+  if(navigator.share){
+    navigator.share({title:'TOP PROD',text,url}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(text).then(()=>{
+      const b=document.querySelector('.go-btn.share');
+      b.textContent='✅ Copied — send it!';
+      setTimeout(()=>b.textContent='📣 Share Result',2500);
+    });
+  }
 }
 
 function restartGame(){
