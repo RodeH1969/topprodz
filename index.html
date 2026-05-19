@@ -1189,6 +1189,8 @@ function leaveRoom(){
 // ══════════════════════════════════════════════════════
 //  ENTER MULTIPLAYER GAME
 // ══════════════════════════════════════════════════════
+let lastHandledRound = -1; // prevent double-handling same round
+
 function enterMPGame(room){
   if(document.getElementById('game').style.display==='flex')return;
   isMP=true;
@@ -1196,8 +1198,10 @@ function enterMPGame(room){
   mpTurnOrder=room.turnOrder||[];
   mpScores=room.scores||{};
   mpHands=room.hands||{};
+  currentTurnIdx=room.turn||0;
+  lastHandledRound=-1;
 
-  // Build my local deck from hand names
+  // Build my full hand as local deck (indexed by round number)
   const myHandNames=mpHands[myId]||[];
   playerDeck=myHandNames.map(n=>ALL_PRODUCTS.find(p=>p.name===n)).filter(Boolean);
 
@@ -1209,7 +1213,7 @@ function enterMPGame(room){
   document.getElementById('live-bar').style.display='flex';
   document.getElementById('scoreboard').style.display='flex';
   document.getElementById('turn-banner').style.display='block';
-  document.getElementById('swap-area').style.display='none'; // no swap in MP
+  document.getElementById('swap-area').style.display='none';
   document.getElementById('live-room').textContent=roomCode;
   document.getElementById('my-label').textContent=myName;
   document.getElementById('my-stack-lbl').textContent=myName+"'s Stack";
@@ -1218,83 +1222,151 @@ function enterMPGame(room){
   renderMPScoreboard();
   renderOpponents();
   updateTurnBanner();
-  setStatus('Game on! Same cards dealt to all players.');
+  setStatus('Game on! Cards dealt — get ready!');
 
-  // Listen for game updates
-  roomRef.on('value',snap=>{
+  // ── SINGLE Firebase listener — source of truth ──
+  roomRef.on('value', snap=>{
     if(!snap.exists())return;
     const r=snap.val();
-    mpPlayers=r.players||{};
-    mpTurnOrder=r.turnOrder||[];
-    mpScores=r.scores||{};
+    mpPlayers  = r.players||{};
+    mpTurnOrder= r.turnOrder||[];
+    mpScores   = r.scores||{};
+    currentTurnIdx = r.turn||0;
 
     renderMPScoreboard();
     updateTurnBanner();
     updateLiveCount();
 
-    // Someone picked a mod — resolve if I haven't yet
-    if(r.roundState&&r.roundState.modId&&r.roundState.resolved!==true){
-      handleMPRoundState(r.roundState, r);
+    // A mod was picked — show result on ALL screens
+    const rs=r.roundState;
+    if(rs && rs.roundNum !== undefined && rs.roundNum !== lastHandledRound){
+      lastHandledRound = rs.roundNum;
+      showRoundResult(rs, r);
     }
   });
 
-  setTimeout(()=>startMPRound(),600);
+  // Start first round
+  setTimeout(()=>showMPRound(room.turn||0, room), 800);
 }
 
 // ══════════════════════════════════════════════════════
-//  MULTIPLAYER ROUND
+//  SHOW A ROUND (called on enter + after each result)
 // ══════════════════════════════════════════════════════
-function isMyMPTurn(){
-  return mpTurnOrder[currentTurnIdx % mpTurnOrder.length]===myId;
-}
+function showMPRound(roundNum, room){
+  const allHands = room ? (room.hands||{}) : mpHands;
+  const scores   = room ? (room.scores||{}) : mpScores;
 
-function startMPRound(){
-  if(playerDeck.length===0){mpEliminated();return;}
-  const allUsed=document.querySelectorAll('.mod-cell.used').length===8;
-  if(allUsed){
-    setStatus('🔄 Rules remix!');
-    setTimeout(()=>{buildModGrid(true);setTimeout(startMPRound,900);},600);
+  // My card for this round
+  const myHandNames = (allHands[myId]||[]);
+  const myCard = ALL_PRODUCTS.find(p=>p.name===myHandNames[roundNum]);
+
+  if(!myCard){
+    setStatus('You have no more cards — watching the game...');
+    canInteract=false;
     return;
   }
-  activePlayer=playerDeck.shift();
-  updateCounts();
+
+  activePlayer = myCard;
+
+  // Check if all mods used
+  const allUsed = document.querySelectorAll('.mod-cell.used').length===8;
+  if(allUsed){
+    setStatus('🔄 Rules remix!');
+    setTimeout(()=>{ buildModGrid(true); setTimeout(()=>showMPRound(roundNum, null), 900); }, 600);
+    return;
+  }
+
+  // Reset card display
   const pi=document.getElementById('player-inner');
   pi.classList.remove('flipped');
   document.getElementById('player-slot').classList.remove('revealed','your-turn');
-  buildCardFace('player',activePlayer);
+  buildCardFace('player', myCard);
+
+  // Flip opponent cards face down
+  mpTurnOrder.forEach(pid=>{
+    if(pid===myId)return;
+    const inner=document.getElementById('opp-inner-'+pid);
+    if(inner) inner.classList.remove('flipped');
+  });
+
   setTimeout(()=>{
     pi.classList.add('flipped');
     sfxCardFlip();
     document.getElementById('player-slot').classList.add('revealed');
-    if(isMyMPTurn()){
+
+    const activePid = mpTurnOrder[currentTurnIdx % mpTurnOrder.length];
+    const isMyTurn  = activePid === myId;
+
+    if(isMyTurn){
       document.getElementById('player-slot').classList.add('your-turn');
       canInteract=true;
-      setStatus('⚡ YOUR TURN — pick a battle rule!');
       lockMods(false);
+      setStatus('⚡ YOUR TURN — pick a battle rule!');
     } else {
       canInteract=false;
       lockMods(true);
-      const activePlayerName=mpPlayers[mpTurnOrder[currentTurnIdx%mpTurnOrder.length]]?.name||'Player';
-      setStatus(`⏳ Waiting for ${activePlayerName} to pick...`);
+      const name=mpPlayers[activePid]?.name||'Player';
+      setStatus(`⏳ ${name} is picking the battle rule...`);
     }
-  },500);
+  }, 500);
+
+  updateCounts();
 }
 
 function lockMods(locked){
   document.querySelectorAll('.mod-cell').forEach(c=>{
-    c.classList.toggle('locked',locked&&!c.classList.contains('used'));
+    c.classList.toggle('locked', locked && !c.classList.contains('used'));
   });
 }
 
-function handleMPRoundState(rs, room){
-  if(rs.handledBy&&rs.handledBy[myId])return; // already handled
-  const mod=[...MOD_SET_A,...MOD_SET_B].find(m=>m.id===rs.modId&&m.type===rs.modType);
-  if(!mod)return;
+// ══════════════════════════════════════════════════════
+//  ACTIVE PLAYER PICKS A MOD
+// ══════════════════════════════════════════════════════
+async function mpPickMod(mod){
+  if(!canInteract) return;
+  const activePid = mpTurnOrder[currentTurnIdx % mpTurnOrder.length];
+  if(activePid !== myId) return;
 
-  // Mark my handling
-  db.ref('rooms/'+roomCode+'/roundState/handledBy/'+myId).set(true);
+  canInteract=false;
+  lockMods(true);
+  sfxBoxReveal();
 
-  // Stamp the used mod cell
+  // Stamp used locally
+  document.querySelectorAll('.mod-cell').forEach(c=>{
+    const idx=parseInt(c.dataset.idx);
+    if(currentMods[idx]&&currentMods[idx].id===mod.id&&!c.classList.contains('used')){
+      c.classList.add('used');
+    }
+  });
+
+  const roundNum = currentTurnIdx; // use global turn counter as round index
+  setStatus(`${mod.icon} ${mod.label}!`);
+
+  // Write to Firebase — all players react via listener
+  await db.ref('rooms/'+roomCode+'/roundState').set({
+    modId:   mod.id,
+    modType: mod.type,
+    modUnit: mod.unit,
+    modLabel:mod.label,
+    modIcon: mod.icon,
+    pickedBy:myId,
+    roundNum,
+    ts: Date.now()
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  SHOW ROUND RESULT — fires on ALL players via listener
+// ══════════════════════════════════════════════════════
+function showRoundResult(rs, room){
+  const mod = [...MOD_SET_A,...MOD_SET_B].find(m=>m.id===rs.modId && m.type===rs.modType);
+  if(!mod) return;
+
+  const allHands  = room.hands||{};
+  const allScores = room.scores||{};
+  const roundNum  = rs.roundNum||0;
+
+  // Stamp the mod as used on everyone's grid
   document.querySelectorAll('.mod-cell').forEach(c=>{
     const idx=parseInt(c.dataset.idx);
     if(currentMods[idx]&&currentMods[idx].id===mod.id&&currentMods[idx].type===mod.type){
@@ -1302,111 +1374,122 @@ function handleMPRoundState(rs, room){
     }
   });
 
-  // Resolve battle for all players
-  const allHands=room.hands||{};
-  const allScores=room.scores||{};
-  const pile=room.pile||0;
-  const eliminated=room.eliminated||{};
-
-  // Get current card for each active player
-  const activePids=mpTurnOrder.filter(pid=>!eliminated[pid]&&(allScores[pid]||0)>0);
+  // Get each player's card for this round
   const cardValues={};
-  activePids.forEach(pid=>{
+  mpTurnOrder.forEach(pid=>{
     const handNames=allHands[pid]||[];
-    // The card they're playing is their first card (already shifted locally)
-    // We use round number to determine which card index
-    const roundNum=rs.roundNum||0;
     const cardName=handNames[roundNum];
     const card=ALL_PRODUCTS.find(p=>p.name===cardName);
-    if(card)cardValues[pid]={card,val:card[mod.id]};
+    if(card) cardValues[pid]={card, val:card[mod.id]};
   });
 
-  // Find winner
+  // Flip opponent cards to show their product
+  mpTurnOrder.forEach(pid=>{
+    if(pid===myId) return;
+    const cd=cardValues[pid];
+    if(!cd) return;
+    const inner=document.getElementById('opp-inner-'+pid);
+    const nameEl=document.getElementById('opp-name-'+pid);
+    const imgEl=document.getElementById('opp-img-'+pid);
+    const priceEl=document.getElementById('opp-price-'+pid);
+    if(nameEl) nameEl.textContent=cd.card.name;
+    if(imgEl)  imgEl.src=imgSrc(cd.card);
+    if(priceEl) priceEl.textContent='$'+cd.card.price.toFixed(2);
+    if(inner){
+      setTimeout(()=>{ inner.classList.add('flipped'); sfxCardFlip(); }, 400);
+    }
+  });
+
+  // Find winner(s)
   const vals=Object.values(cardValues).map(v=>v.val).filter(v=>v!==undefined);
-  if(vals.length===0)return;
+  if(vals.length===0) return;
   const winVal=mod.type==='high'?Math.max(...vals):Math.min(...vals);
   const winners=Object.entries(cardValues).filter(([,v])=>v.val===winVal).map(([pid])=>pid);
-  const isTie=winners.length>1||winners.length===activePids.length;
+  const isTie=winners.length===Object.keys(cardValues).length;
 
-  // Did I win?
   const myVal=cardValues[myId]?.val;
   const iWon=winners.includes(myId);
 
-  // Show result
-  const resultScores=activePids.map(pid=>({
-    pid,
-    name:mpPlayers[pid]?.name||pid,
-    val:fmt(cardValues[pid]?.val||0,mod.unit),
-    winner:winners.includes(pid)
-  }));
+  // Build result scores display
+  const resultScores=mpTurnOrder
+    .filter(pid=>cardValues[pid])
+    .map(pid=>({
+      pid,
+      name:mpPlayers[pid]?.name||pid,
+      val: fmt(cardValues[pid].val, mod.unit),
+      winner: winners.includes(pid)
+    }));
 
-  const pFmt=fmt(myVal,mod.unit);
-
+  // Play sound + show overlay
   if(isTie){
     sfxTie();
-    showMPResult('tie','🤝','DEAD HEAT',`Pile grows!`,resultScores);
+    showMPResult('tie','🤝','DEAD HEAT','Pile grows — next winner takes all!', resultScores);
   } else if(iWon){
     sfxRoundWin();
-    showMPResult('win','⚡','YOU WIN!',`${mod.icon} ${mod.label}`,resultScores);
+    showMPResult('win','⚡','YOU WIN!',`${mod.icon} ${mod.label}`, resultScores);
   } else {
     sfxRoundLose();
     const winnerName=mpPlayers[winners[0]]?.name||'Player';
-    showMPResult('lose','🛒',winnerName+' WINS!',`${mod.icon} ${mod.label}`,resultScores);
+    showMPResult('lose','🛒',winnerName+' WINS!',`${mod.icon} ${mod.label}`, resultScores);
   }
 
-  // Update my local deck score (host updates Firebase)
-  if(iWon&&!isTie){
-    // I won — get pile cards too (simplified: just track card counts)
+  // Host updates Firebase scores + advances turn
+  if(amHost){
+    setTimeout(async ()=>{
+      const newScores={...allScores};
+      const newTurn=(roundNum+1);
+      const activePids=mpTurnOrder.filter(pid=>cardValues[pid]);
+
+      if(!isTie){
+        // Winner gets all cards played + pile
+        const pile=room.pile||0;
+        newScores[winners[0]]=(newScores[winners[0]]||0) + activePids.length + pile;
+        activePids.filter(pid=>pid!==winners[0]).forEach(pid=>{
+          newScores[pid]=Math.max(0,(newScores[pid]||0)-1);
+        });
+        await roomRef.update({ scores:newScores, turn:newTurn, pile:0, roundState:null });
+      } else {
+        // Tie — add to pile, all lose a card
+        const newPile=(room.pile||0)+activePids.length;
+        activePids.forEach(pid=>{ newScores[pid]=Math.max(0,(newScores[pid]||0)-1); });
+        await roomRef.update({ scores:newScores, turn:newTurn, pile:newPile, roundState:null });
+      }
+    }, 5000);
   }
 
-  // Advance turn after result
+  // All players advance to next round after overlay
   setTimeout(()=>{
-    currentTurnIdx++;
-    // Skip eliminated players
-    while(mpScores[mpTurnOrder[currentTurnIdx%mpTurnOrder.length]]===0 && mpTurnOrder.length>1){
-      currentTurnIdx++;
+    const nextRound=roundNum+1;
+    // Check if game over
+    const activePids=mpTurnOrder.filter(pid=>(mpScores[pid]||0)>0 || cardValues[pid]);
+    const stillIn=activePids.filter(pid=>{
+      const hands=allHands[pid]||[];
+      return hands[nextRound]!==undefined;
+    });
+    if(stillIn.length<=1){
+      endMPGame(stillIn[0]||winners[0]);
+      return;
     }
-    updateTurnBanner();
-    startMPRound();
-  },5500);
+    showMPRound(nextRound, null);
+  }, 5500);
 }
 
-// Host resolves scores in Firebase
-async function mpPickMod(mod){
-  if(!canInteract||!isMyMPTurn())return;
-  canInteract=false;
-  lockMods(true);
-  sfxBoxReveal();
-
-  const roundNum=document.querySelectorAll('.mod-cell.used').length;
-  setStatus(`${mod.icon} ${mod.label}!`);
-
-  await db.ref('rooms/'+roomCode+'/roundState').set({
-    modId:mod.id,
-    modType:mod.type,
-    modUnit:mod.unit,
-    modLabel:mod.label,
-    modIcon:mod.icon,
-    pickedBy:myId,
-    roundNum,
-    handledBy:{},
-    ts:Date.now()
-  });
-
-  // Stamp locally
-  document.querySelectorAll('.mod-cell').forEach(c=>{
-    if(!c.classList.contains('used')){
-      const idx=parseInt(c.dataset.idx);
-      if(currentMods[idx]&&currentMods[idx].id===mod.id){
-        c.classList.add('used');
-      }
-    }
-  });
+function endMPGame(winnerPid){
+  const won = winnerPid===myId;
+  document.getElementById('go-emoji').textContent = won?'🏆':'🛒';
+  document.getElementById('go-title').textContent = won?'CHAMPION!':'GAME OVER';
+  document.getElementById('go-title').style.color = won?'#4ade80':'#f87171';
+  const winnerName = mpPlayers[winnerPid]?.name||'Someone';
+  document.getElementById('go-sub').textContent = won
+    ? 'Last player standing — you emptied everyone's cart!'
+    : `${winnerName} was the last one standing!`;
+  won ? sfxJackpot() : sfxGameLose();
+  document.getElementById('gameover').classList.add('open');
 }
 
 function mpEliminated(){
-  setStatus('You ran out of cards!');
-  // Still watch game
+  setStatus('You ran out of cards — watching the game...');
+  canInteract=false;
 }
 
 function renderOpponents(){
