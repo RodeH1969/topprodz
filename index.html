@@ -937,6 +937,22 @@ let roundHistory=[];
 // ══════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded',()=>{
   ['touchstart','mousedown'].forEach(e=>document.addEventListener(e,()=>getCtx(),{once:true}));
+
+  // Auto-fill join code from URL param ?join=CODE
+  const urlParams = new URLSearchParams(location.search);
+  const joinCode = urlParams.get('join');
+  if(joinCode){
+    // Pre-select Live Table mode and fill in the code
+    setTimeout(()=>{
+      setMode('multi');
+      document.getElementById('mode-multi').classList.add('active');
+      document.getElementById('mode-solo').classList.remove('active');
+      document.getElementById('join-code').value = joinCode.toUpperCase().slice(0,4);
+      document.getElementById('waiting-sub') && null;
+      // Highlight the join field
+      setTimeout(()=>document.getElementById('join-code').focus(), 3000);
+    }, 3100); // after splash
+  }
   const card=document.getElementById('splash-card');
   card.animate([{transform:'scale(0.1) rotate(-180deg)',opacity:0},{transform:'scale(1.08) rotate(8deg)',opacity:1,offset:0.65},{transform:'scale(1) rotate(0)',opacity:1}],{duration:1300,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'forwards'});
   setTimeout(()=>{
@@ -982,8 +998,10 @@ async function doCreate(){
   if(!name){setErr('Enter your name first');return;}
   myName=name; myId=uid(); amHost=true; roomCode=genCode();
   try{
+    // Always force a fresh room — wipes any stale previous game with same code
     await db.ref('rooms/'+roomCode).set({
       host:myId, status:'waiting', created:Date.now(),
+      expiresAt: Date.now() + 2*60*60*1000, // room expires after 2 hours
       players:{[myId]:{name:myName,cards:0}},
       turn:0, turnOrder:null, hands:null, scores:null,
       pile:0, modSet:0, usedMods:[], roundState:null
@@ -999,11 +1017,25 @@ async function doJoin(){
   if(code.length<3){setErr('Enter room code');return;}
   try{
     const snap=await db.ref('rooms/'+code).once('value');
-    if(!snap.exists()){setErr('Room not found');return;}
+    if(!snap.exists()){setErr('Room "'+code+'" not found — check the code');return;}
     const room=snap.val();
-    if(room.status!=='waiting'){setErr('Game already started');return;}
+
+    // Check room hasn't expired (older than 2 hours = stale)
+    if(room.expiresAt && Date.now() > room.expiresAt){
+      setErr('That room has expired — ask host to create a new one');return;
+    }
+
+    // Only block joining if game is PLAYING and was started more than 60 seconds ago
+    // (60s grace handles the race where host hits start while friend is typing)
+    if(room.status==='playing'){
+      const startedAgo = Date.now() - (room.startedAt||0);
+      if(startedAgo > 60000){
+        setErr('Game already started — ask them to start a new room');return;
+      }
+    }
+
     const count=Object.keys(room.players||{}).length;
-    if(count>=5){setErr('Room is full (max 5)');return;}
+    if(count>=5){setErr('Room is full (max 5 players)');return;}
     myName=name; myId=uid(); amHost=false; roomCode=code;
     await db.ref('rooms/'+code+'/players/'+myId).set({name:myName,cards:0});
     enterWaiting();
@@ -1016,10 +1048,13 @@ function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
 //  WAITING ROOM
 // ══════════════════════════════════════════════════════
 function doInvite(){
-  const url = location.origin + location.pathname;
+  const url = location.origin + location.pathname + '?join=' + roomCode;
   const text = `🛒 Join my TOP PROD game!
 
-Go to: ${url}
+Tap this link to join — code pre-filled for you:
+${url}
+
+Or go to: ${location.origin + location.pathname}
 Tap Live Table → Join Room → enter code: ${roomCode}
 
 Battle of the Brands — let's go! 🃏`;
@@ -1094,6 +1129,7 @@ async function hostStart(){
 
   await roomRef.update({
     status:'playing',
+    startedAt: Date.now(),
     turnOrder,
     turn:0,
     hands,
