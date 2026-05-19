@@ -1192,7 +1192,7 @@ function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
 // ══════════════════════════════════════════════════════
 function doInvite(){
   const url = location.origin + location.pathname + '?join=' + roomCode;
-  const text = `🛒 Join my TOP PROD game!
+  const text = `🛒 Hey! ${myName} is keen to play you in a live game of TOP PROD right now.
 
 Tap this link to join — code pre-filled for you:
 ${url}
@@ -1200,7 +1200,7 @@ ${url}
 Or go to: ${location.origin + location.pathname}
 Tap Live Table → Join Room → enter code: ${roomCode}
 
-Battle of the Product Stats — let's go! 🃏`;
+Battle of the Product Stats — Game on! 🃏`;
   const btn = document.getElementById('invite-btn');
   if(navigator.share){
     navigator.share({ title:'TOP PROD — Join my game!', text, url }).catch(()=>{});
@@ -1329,13 +1329,8 @@ async function hostStart(){
   pids.forEach((pid,i)=>{
     // Give each player 5 cards as a cycling deck
     // Store full deck (all 5 cards repeated enough to last many rounds)
-    const hand=shuffled.slice(i*5,(i+1)*5).map(p=>p.name);
-    // Repeat deck 20 times so game never runs out
-    hands[pid]=[...hand,...hand,...hand,...hand,
-                ...hand,...hand,...hand,...hand,
-                ...hand,...hand,...hand,...hand,
-                ...hand,...hand,...hand,...hand,
-                ...hand,...hand,...hand,...hand];
+    // Store just the 5 cards — card lookup uses modulo so it cycles forever
+    hands[pid]=shuffled.slice(i*5,(i+1)*5).map(p=>p.name);
   });
   const scores=Object.fromEntries(pids.map(p=>[p,5]));
 
@@ -1367,6 +1362,7 @@ function leaveRoom(){
 // ══════════════════════════════════════════════════════
 let lastHandledRound = -1; // prevent double-handling same round
 let lastSwapTs = 0;          // prevent double-handling same swap
+let mpPile = 0;              // current pile count
 
 function enterMPGame(room){
   if(document.getElementById('game').style.display==='flex')return;
@@ -1411,11 +1407,13 @@ function enterMPGame(room){
     mpPlayers  = r.players||{};
     mpTurnOrder= r.turnOrder||[];
     mpScores   = r.scores||{};
+    mpPile     = r.pile||0;
     currentTurnIdx = r.turn||0;
 
     renderMPScoreboard();
     updateTurnBanner();
     updateLiveCount();
+    updateCounts();
 
     // A swap happened — show popup on ALL screens
     const sw=r.lastSwap;
@@ -1602,7 +1600,7 @@ function showMPRound(roundNum, room){
 
   // My card for this round
   const myHandNames = (allHands[myId]||[]);
-  const myCard = ALL_PRODUCTS.find(p=>p.name===myHandNames[roundNum]);
+  const myCard = ALL_PRODUCTS.find(p=>p.name===myHandNames[roundNum % myHandNames.length]);
 
   if(!myCard){
     // Should never happen with repeating deck, but safety net
@@ -1815,7 +1813,7 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
   const cardValues={};
   mpTurnOrder.forEach(pid=>{
     const handNames=allHands[pid]||[];
-    const cardName=handNames[roundNum];
+    const cardName=handNames[roundNum % Math.max(handNames.length,1)];
     const card=ALL_PRODUCTS.find(p=>p.name===cardName);
     if(card) cardValues[pid]={card, val:card[mod.id]};
   });
@@ -1877,22 +1875,32 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
       const newTurn=(roundNum+1);
       const activePids=mpTurnOrder.filter(pid=>cardValues[pid]);
 
+      const pile = room.pile||0;
+
       if(!isTie){
-        // Winner gets all cards played + pile
-        const pile=room.pile||0;
-        newScores[winners[0]]=(newScores[winners[0]]||0) + activePids.length + pile;
-        activePids.filter(pid=>pid!==winners[0]).forEach(pid=>{
-          newScores[pid]=Math.max(0,(newScores[pid]||0)-1);
+        // Each loser gives 1 card to winner. Winner also gets pile.
+        // Total cards always stays constant (10 for 2 players etc)
+        const losers = activePids.filter(pid=>pid!==winners[0]);
+        losers.forEach(pid=>{
+          newScores[pid] = Math.max(0,(newScores[pid]||0) - 1);
         });
+        // Winner gains: 1 card per loser + pile
+        newScores[winners[0]] = (newScores[winners[0]]||0) + losers.length + pile;
         await roomRef.update({ scores:newScores, turn:newTurn, pile:0, roundState:null });
       } else {
-        // Tie — add to pile, all lose a card
-        const newPile=(room.pile||0)+activePids.length;
-        activePids.forEach(pid=>{ newScores[pid]=Math.max(0,(newScores[pid]||0)-1); });
+        // Tie — each player puts 1 card into the pile
+        const newPile = pile + activePids.length;
+        activePids.forEach(pid=>{
+          newScores[pid] = Math.max(0,(newScores[pid]||0) - 1);
+        });
         await roomRef.update({ scores:newScores, turn:newTurn, pile:newPile, roundState:null });
       }
-      // Update local scores immediately for all players
+      // Update local scores immediately so UI reflects instantly
       mpScores={...newScores};
+
+      // Sanity check — log total
+      const total = Object.values(newScores).reduce((a,b)=>a+b,0) + (pile||0);
+      console.log('Score total:', total, '| Scores:', newScores);
     }, 5000);
   }
 
@@ -2223,8 +2231,9 @@ function doSwap(){
 
 function updateCounts(){
   if(isMP){
-    document.getElementById('player-count').textContent=playerDeck.length+(activePlayer?1:0);
-    // Update opponent counts
+    // Use Firebase scores as source of truth — total always = starting cards
+    document.getElementById('player-count').textContent = mpScores[myId]||0;
+    document.getElementById('pile-n').textContent = mpPile||0;
     mpTurnOrder.forEach(pid=>{
       if(pid===myId)return;
       const el=document.getElementById('opp-count-'+pid);
@@ -2266,9 +2275,18 @@ function doShare(){
   let text;
 
   if(isMP){
-    const playerCount = mpTurnOrder.length;
     const rematch = roomCode ? `\n\nRematch? Room ${roomCode} is still open 👇\n${url}?join=${roomCode}` : `\n\n👉 ${url}`;
-    text = `🛒 TOP PROD — ${getDailyStr()}\n\n🏆 Just wiped the floor with ${playerCount-1} mate${playerCount>2?'s':''} in a Live Table!\n\nLast player standing — emptied everyone's cart!\n\nThink you can beat me?${rematch}`;
+    // Build loser names list
+    const losers = mpTurnOrder
+      .filter(pid => pid !== myId)
+      .map(pid => mpPlayers[pid]?.name || 'them')
+      .filter(Boolean);
+    const loserStr = losers.length === 1
+      ? losers[0]
+      : losers.slice(0,-1).join(', ') + ' & ' + losers.slice(-1);
+    // His/her/their cart
+    const pronoun = losers.length === 1 ? 'their' : 'their';
+    text = `🛒 TOP PROD — ${getDailyStr()}\n\n🏆 Just wiped the floor with ${loserStr} in a Live Table!\n\nLast player standing — emptied ${pronoun} cart!\n\nThink you can beat me?${rematch}`;
   } else {
     const wins = roundHistory.filter(r=>r==='w').length;
     const sq = roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
