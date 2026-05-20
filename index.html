@@ -1641,8 +1641,9 @@ function enterMPGame(room){
     updateLiveCount();
     updateCounts();
 
-    // Game finished — show winner on ALL screens
-    if(r.status==='finished' && r.winner && !mpGameOver){
+    // Game finished — show winner on ALL screens (only if game screen is visible)
+    if(r.status==='finished' && r.winner && !mpGameOver &&
+       document.getElementById('game').style.display==='flex'){
       endMPGame(r.winner);
       return;
     }
@@ -2250,35 +2251,36 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
 function endMPGame(winnerPid){
   if(mpGameOver) return;
   mpGameOver = true;
-  const won = winnerPid===myId;
-  const winnerName = mpPlayers[winnerPid]?.name || 'Someone';
-  const loserName  = mpTurnOrder.find(pid=>pid!==winnerPid);
-  const loserNameStr = loserName ? (mpPlayers[loserName]?.name||'You') : 'You';
+  clearTurnTimer();
+  canInteract = false;
 
-  // Hide all sections first
-  ['go-winner','go-loser','go-solo'].forEach(id=>{
-    document.getElementById(id).style.display='none';
+  const won        = winnerPid === myId;
+  const winnerName = mpPlayers[winnerPid]?.name || 'Someone';
+  const loserPid   = mpTurnOrder.find(pid => pid !== winnerPid);
+  const loserName  = loserPid ? (mpPlayers[loserPid]?.name || 'You') : 'You';
+
+  // Hide all sections
+  ['go-winner','go-loser','go-solo'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
   });
 
   if(won){
-    // WINNER screen
-    const winSec = document.getElementById('go-winner');
-    document.getElementById('go-title-w').textContent = `🎉 ${myName.toUpperCase()} WINS!`;
-    document.getElementById('go-sub-w').textContent   = `You emptied ${loserNameStr}'s cart — champion!`;
-    winSec.style.display = 'flex';
+    document.getElementById('go-title-w').textContent = '🎉 ' + myName.toUpperCase() + ' WINS!';
+    document.getElementById('go-sub-w').textContent   = 'You emptied ' + loserName + "'s cart — champion!";
+    document.getElementById('go-winner').style.display = 'flex';
     sfxJackpot();
     launchFireworks();
-    setTimeout(()=>document.getElementById('gameover').classList.add('open'), 800);
+    setTimeout(() => document.getElementById('gameover').classList.add('open'), 800);
   } else {
-    // LOSER screen
-    const loseSec = document.getElementById('go-loser');
-    document.getElementById('go-title-l').textContent  = `😭 ${winnerName.toUpperCase()} WINS!`;
-    document.getElementById('go-sub-l2').textContent   = `${winnerName} emptied your cart this time...`;
-    loseSec.style.display = 'flex';
+    document.getElementById('go-title-l').textContent = '🏆 ' + winnerName.toUpperCase() + ' WINS!';
+    document.getElementById('go-sub-l2').textContent  = winnerName + ' emptied your cart this time...';
+    document.getElementById('go-loser').style.display = 'flex';
     sfxGameLose();
     document.getElementById('gameover').classList.add('open');
   }
 }
+
 
 function mpEliminated(){
   setStatus('You ran out of cards — watching the game...');
@@ -2524,11 +2526,14 @@ function buildCardFace(who,product){
   document.getElementById(who+'-cf-rows').innerHTML=rows.map(([l,v])=>`<div class="cf-row"><span class="cf-rlbl">${l}</span><span class="cf-rval">${v}</span></div>`).join('');
 }
 
-let swapBusy = false;
+let swapInProgress = false;
 function doSwap(){
-  if(!canInteract||swapsLeft<=0||!activePlayer||swapBusy)return;
-  swapBusy=true;
-  setTimeout(()=>swapBusy=false, 2000);
+  if(swapInProgress||swapsLeft<=0||!activePlayer)return;
+  // Allow swap even if canInteract is briefly false during animation
+  // but not after a mod has been picked (roundState exists)
+  if(!isMP && !canInteract) return; // solo: respect canInteract
+  swapInProgress=true;
+  setTimeout(()=>swapInProgress=false, 2500);
 
   if(isMP){
     // MP swap: steal a random opponent's card for this round
