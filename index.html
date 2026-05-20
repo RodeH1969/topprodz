@@ -126,7 +126,7 @@ body {
 #pgr-bar-fill {
   height:100%; width:100%; border-radius:2px;
   background:linear-gradient(90deg,var(--orange),var(--yellow));
-  transition:width 15s linear;
+  transition:width 20s linear;
 }
 #pgr-got-it {
   width:100%; padding:13px; background:var(--orange); color:#fff;
@@ -753,7 +753,7 @@ body {
 .rules-play-btn { width:100%; margin-top:14px; background:var(--orange); color:#fff; border:none; font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; padding:13px; border-radius:14px; cursor:pointer; }
 
 /* game over */
-#gameover { display:none; position:fixed; inset:0; z-index:180; background:rgba(0,0,0,0.96); flex-direction:column; align-items:center; justify-content:center; padding:32px; text-align:center; backdrop-filter:blur(12px); gap:14px; }
+#gameover { display:none; position:fixed; inset:0; z-index:195; background:rgba(0,0,0,0.96); flex-direction:column; align-items:center; justify-content:center; padding:32px; text-align:center; backdrop-filter:blur(12px); gap:14px; }
 #gameover.open { display:flex; }
 #go-emoji { font-size:80px; }
 #go-title { font-family:'Bebas Neue',sans-serif; font-size:54px; letter-spacing:4px; }
@@ -773,8 +773,8 @@ body {
     <!-- Timer rule — prominent -->
     <div id="pgr-timer-box">
       <span id="pgr-timer-icon">⏱</span>
-      <div id="pgr-timer-title">15 SECOND TIMER</div>
-      <div id="pgr-timer-desc">You have <b>15 seconds</b> to pick a battle rule.<br>Too slow? <em>You lose your card — no excuses!</em></div>
+      <div id="pgr-timer-title">20 SECOND TIMER</div>
+      <div id="pgr-timer-desc">You have <b>20 seconds</b> to pick a battle rule.<br>Too slow? <em>You lose your card — no excuses!</em></div>
     </div>
 
     <div id="pgr-rules-list">
@@ -786,7 +786,7 @@ body {
       <div class="pgr-step"><span class="pgr-n">🏆</span><span class="pgr-t"><b>Last player with cards wins!</b></span></div>
     </div>
 
-    <div id="pgr-countdown">Auto-closing in 15 seconds...</div>
+    <div id="pgr-countdown">Auto-closing in 20 seconds...</div>
     <div id="pgr-bar"><div id="pgr-bar-fill"></div></div>
     <button id="pgr-got-it" onclick="closePregameRules()">GOT IT — LET'S PLAY!</button>
   </div>
@@ -1034,7 +1034,7 @@ body {
     <div class="rules-step"><span class="rs-n">4</span><span class="rs-t">Best stat wins <b>everyone's</b> card that round. Ties? Cards go to the pile — next winner takes them all.</span></div>
     <div class="rules-step"><span class="rs-n">5</span><span class="rs-t">Rules get a <b>USED</b> stamp once played. After all 6 are used they <b>remix</b> with opposite directions.</span></div>
     <div class="rules-step"><span class="rs-n">6</span><span class="rs-t"><b>Solo:</b> First to empty the other's deck wins. <b>Live Table:</b> Last player with cards wins!</span></div>
-    <div class="rules-step"><span class="rs-n">⏱</span><span class="rs-t"><b>15 second timer</b> — in Live Table, if you don't pick a rule in time, <em>Too slow dude! You lose that round!</em></span></div>
+    <div class="rules-step"><span class="rs-n">⏱</span><span class="rs-t"><b>20 second timer</b> — in Live Table, if you don't pick a rule in time, <em>Too slow dude! You lose that round!</em></span></div>
     <hr class="rules-hr">
     <div class="rules-step" style="margin-top:12px"><span class="rs-n">🔄</span><span class="rs-t"><b>SWAP POWER</b> — Before picking a rule, swap your card with the Trolley Master's (solo only). 2 per game.</span></div>
     <button class="rules-play-btn" onclick="closeRules()">GOT IT — LET'S PLAY!</button>
@@ -2196,16 +2196,30 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
 
 function endMPGame(winnerPid){
   const won = winnerPid===myId;
-  document.getElementById('go-emoji').textContent = won?'🏆':'🛒';
-  document.getElementById('go-title').textContent = won?'CHAMPION!':'GAME OVER';
-  document.getElementById('go-title').style.color = won?'#4ade80':'#f87171';
-  const winnerName = mpPlayers[winnerPid]?.name||'Someone';
+  const winnerName = mpPlayers[winnerPid]?.name || 'Someone';
+
+  // Set content
+  document.getElementById('go-emoji').textContent = won ? '🏆' : '🛒';
+  document.getElementById('go-title').textContent = won ? `🎉 ${myName.toUpperCase()} WINS!` : `🏆 ${winnerName.toUpperCase()} WINS!`;
+  document.getElementById('go-title').style.color = won ? '#4ade80' : '#f87171';
+  document.getElementById('go-title').style.fontSize = '42px';
   document.getElementById('go-sub').textContent = won
-    ? 'Last player standing — you emptied their cart!'
-    : `${winnerName} was the last one standing!`;
+    ? `Last player standing — you emptied ${winnerName !== myName ? winnerName+"'s" : 'their'} cart!`
+    : `${winnerName} was the last one standing — better luck next time!`;
+
+  // Show share button for winner, hide for loser (or show both)
+  const shareBtn = document.querySelector('.go-btn.share');
+  if(shareBtn) shareBtn.style.display = won ? 'block' : 'none';
+
   won ? sfxJackpot() : sfxGameLose();
-  document.getElementById('gameover').classList.add('open');
-  if(won) launchFireworks();
+
+  // Launch fireworks first, then show gameover popup on top
+  if(won){
+    launchFireworks();
+    setTimeout(()=>document.getElementById('gameover').classList.add('open'), 800);
+  } else {
+    document.getElementById('gameover').classList.add('open');
+  }
 }
 
 function mpEliminated(){
@@ -2604,7 +2618,7 @@ function openPregameRules(){
   setTimeout(()=>{ fill.style.width='0%'; }, 50);
 
   // Countdown text
-  let secs = 15;
+  let secs = 20;
   countdownEl.textContent = `Auto-closing in ${secs} seconds...`;
   pregameCountdown = setInterval(()=>{
     secs--;
@@ -2613,7 +2627,7 @@ function openPregameRules(){
   }, 1000);
 
   // Auto close after 15s
-  pregameTimer = setTimeout(()=>closePregameRules(), 15000);
+  pregameTimer = setTimeout(()=>closePregameRules(), 20000);
 }
 
 function closePregameRules(){
@@ -2643,7 +2657,7 @@ function startTurnTimer(roundNum){
   fill.style.width = '100%';
 
   setTimeout(()=>{
-    fill.style.transition = 'width 15s linear';
+    fill.style.transition = 'width 20s linear';
     fill.style.width = '0%';
   }, 50);
 
@@ -2662,7 +2676,7 @@ function startTurnTimer(roundNum){
       roundNum: currentTurnIdx,
       ts: Date.now()
     }).catch(e=>console.error('Timer Firebase write failed:', e));
-  }, 15000);
+  }, 20000);
 }
 
 function clearTurnTimer(){
