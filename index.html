@@ -1619,7 +1619,7 @@ function enterMPGame(room){
     updateCounts();
 
     // Game finished — show winner on ALL screens
-    if(r.status==='finished' && r.winner && document.getElementById('gameover').style.display!=='flex' && !document.getElementById('gameover').classList.contains('open')){
+    if(r.status==='finished' && r.winner && !mpGameOver){
       endMPGame(r.winner);
       return;
     }
@@ -2177,47 +2177,49 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
   // Host updates Firebase scores + advances turn
   if(amHost){
     setTimeout(async ()=>{
-      const newScores={...allScores};
-      const newTurn=(roundNum+1);
-      const activePids=mpTurnOrder.filter(pid=>cardValues[pid]);
-
-      const pile = room.pile||0;
+      const newScores  = {...allScores};
+      const newTurn    = roundNum + 1;
+      const activePids = mpTurnOrder.filter(pid=>cardValues[pid]);
+      const pile       = room?.pile||0;
 
       if(!isTie){
-        // Each loser gives 1 card to winner. Winner also gets pile.
-        // Total cards always stays constant (10 for 2 players etc)
         const losers = activePids.filter(pid=>pid!==winners[0]);
-        losers.forEach(pid=>{
-          newScores[pid] = Math.max(0,(newScores[pid]||0) - 1);
-        });
-        // Winner gains: 1 card per loser + pile
+        losers.forEach(pid=>{ newScores[pid] = Math.max(0,(newScores[pid]||0)-1); });
         newScores[winners[0]] = (newScores[winners[0]]||0) + losers.length + pile;
-        await roomRef.update({ scores:newScores, turn:newTurn, pile:0, roundState:null });
       } else {
-        // Tie — each player puts 1 card into the pile
         const newPile = pile + activePids.length;
-        activePids.forEach(pid=>{
-          newScores[pid] = Math.max(0,(newScores[pid]||0) - 1);
-        });
+        activePids.forEach(pid=>{ newScores[pid] = Math.max(0,(newScores[pid]||0)-1); });
         await roomRef.update({ scores:newScores, turn:newTurn, pile:newPile, roundState:null });
+        mpScores = {...newScores};
+        return; // tie — no winner check needed
       }
-      // Update local scores immediately so UI reflects instantly
-      mpScores={...newScores};
 
-      // Check for winner and write to Firebase so ALL players get the signal
-      const activePidsLeft = mpTurnOrder.filter(pid=>(newScores[pid]||0)>0);
-      if(activePidsLeft.length<=1){
-        const winnerPid = activePidsLeft[0] || winners[0];
-        await roomRef.update({ status:'finished', winner: winnerPid });
+      // Check for winner BEFORE writing so we can set status:finished atomically
+      const stillAlive = mpTurnOrder.filter(pid=>(newScores[pid]||0)>0);
+      const gameOver   = stillAlive.length <= 1;
+      const winnerPid  = stillAlive[0] || winners[0];
+
+      if(gameOver){
+        // Write everything including finished status in one update
+        await roomRef.update({
+          scores:     newScores,
+          turn:       newTurn,
+          pile:       0,
+          roundState: null,
+          status:     'finished',
+          winner:     winnerPid
+        });
+      } else {
+        await roomRef.update({ scores:newScores, turn:newTurn, pile:0, roundState:null });
       }
-    }, 5000);
+      mpScores = {...newScores};
+    }, 3500); // 3.5s — fires before 5.5s advance-round timeout
   }
 
-  // All players advance to next round after overlay
-  // Firebase listener handles game-over detection via 'winner' field
-  // Just move to next round here — endMPGame fires via listener when host sets winner
+  // Advance to next round — but only if game not over
   setTimeout(()=>{
-    const nextRound=roundNum+1;
+    if(mpGameOver) return; // winner already declared
+    const nextRound = roundNum+1;
     showMPRound(nextRound, null);
   }, 5500);
 }
