@@ -77,6 +77,63 @@ body {
   pointer-events:none; display:none;
 }
 
+/* ── PRE-GAME RULES POPUP ── */
+#pregame-rules {
+  position:fixed; inset:0; z-index:190;
+  background:rgba(0,0,0,0.92); backdrop-filter:blur(12px);
+  display:none; align-items:center; justify-content:center;
+  padding:20px;
+}
+#pregame-rules.open { display:flex; }
+#pgr-card {
+  background:linear-gradient(160deg,#0f172a,#1e1b4b);
+  border:2px solid rgba(255,102,0,0.4); border-radius:22px;
+  padding:24px 20px 20px; max-width:360px; width:100%;
+  max-height:88vh; overflow-y:auto; position:relative;
+  box-shadow:0 0 60px rgba(255,102,0,0.2);
+  animation:rulesIn 0.35s cubic-bezier(.17,.67,.35,1.3);
+}
+#pgr-heading {
+  font-family:'Bebas Neue',sans-serif; font-size:28px;
+  letter-spacing:4px; text-align:center; color:var(--orange);
+  margin-bottom:14px;
+}
+#pgr-timer-box {
+  background:linear-gradient(135deg,rgba(234,179,8,0.2),rgba(255,102,0,0.15));
+  border:2px solid var(--yellow); border-radius:14px;
+  padding:14px 16px; margin-bottom:16px; text-align:center;
+}
+#pgr-timer-icon { font-size:36px; display:block; margin-bottom:4px; }
+#pgr-timer-title {
+  font-family:'Bebas Neue',sans-serif; font-size:22px;
+  letter-spacing:2px; color:var(--yellow); margin-bottom:4px;
+}
+#pgr-timer-desc {
+  font-family:'Barlow Condensed',sans-serif; font-size:13px;
+  font-weight:700; color:rgba(255,255,255,0.75); line-height:1.5;
+}
+#pgr-rules-list { margin-bottom:16px; }
+.pgr-step { display:flex; gap:10px; align-items:flex-start; margin-bottom:8px; }
+.pgr-n { flex-shrink:0; width:20px; height:20px; border-radius:50%; background:var(--orange); font-family:'Bebas Neue',sans-serif; font-size:12px; display:flex; align-items:center; justify-content:center; color:#fff; }
+.pgr-t { font-size:12px; color:rgba(255,255,255,0.8); line-height:1.5; }
+.pgr-t b { color:#fff; } .pgr-t em { color:var(--yellow); font-style:normal; }
+#pgr-countdown {
+  font-family:'Barlow Condensed',sans-serif; font-size:12px;
+  font-weight:700; letter-spacing:1px; color:rgba(255,255,255,0.35);
+  text-align:center; margin-bottom:10px;
+}
+#pgr-bar { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; margin-bottom:14px; }
+#pgr-bar-fill {
+  height:100%; width:100%; border-radius:2px;
+  background:linear-gradient(90deg,var(--orange),var(--yellow));
+  transition:width 15s linear;
+}
+#pgr-got-it {
+  width:100%; padding:13px; background:var(--orange); color:#fff;
+  border:none; font-family:'Bebas Neue',sans-serif;
+  font-size:20px; letter-spacing:2px; border-radius:14px; cursor:pointer;
+}
+
 /* ── SPLASH ── */
 #splash {
   position:fixed; inset:0; z-index:200; background:var(--dark);
@@ -708,6 +765,33 @@ body {
 </head>
 <body>
 
+<!-- PRE-GAME RULES POPUP -->
+<div id="pregame-rules">
+  <div id="pgr-card">
+    <div id="pgr-heading">⚡ QUICK RULES</div>
+
+    <!-- Timer rule — prominent -->
+    <div id="pgr-timer-box">
+      <span id="pgr-timer-icon">⏱</span>
+      <div id="pgr-timer-title">15 SECOND TIMER</div>
+      <div id="pgr-timer-desc">You have <b>15 seconds</b> to pick a battle rule.<br>Too slow? <em>You lose your card — no excuses!</em></div>
+    </div>
+
+    <div id="pgr-rules-list">
+      <div class="pgr-step"><span class="pgr-n">1</span><span class="pgr-t">Each player gets <b>5 cards</b> from real Aldi products.</span></div>
+      <div class="pgr-step"><span class="pgr-n">2</span><span class="pgr-t">Your card flips face-up. The active player picks a <b>battle rule</b> — everyone fights with that stat.</span></div>
+      <div class="pgr-step"><span class="pgr-n">3</span><span class="pgr-t"><b>Best stat wins</b> everyone's card that round. Ties go to the pile — next winner takes them all.</span></div>
+      <div class="pgr-step"><span class="pgr-n">4</span><span class="pgr-t">After 6 rules are used they <b>remix</b> with fresh stats.</span></div>
+      <div class="pgr-step"><span class="pgr-n">🔄</span><span class="pgr-t"><b>SWAP</b> — steal your opponent's card before picking. 2 per game.</span></div>
+      <div class="pgr-step"><span class="pgr-n">🏆</span><span class="pgr-t"><b>Last player with cards wins!</b></span></div>
+    </div>
+
+    <div id="pgr-countdown">Auto-closing in 15 seconds...</div>
+    <div id="pgr-bar"><div id="pgr-bar-fill"></div></div>
+    <button id="pgr-got-it" onclick="closePregameRules()">GOT IT — LET'S PLAY!</button>
+  </div>
+</div>
+
 <!-- FIREWORKS CANVAS -->
 <canvas id="fireworks-canvas"></canvas>
 
@@ -950,7 +1034,7 @@ body {
     <div class="rules-step"><span class="rs-n">4</span><span class="rs-t">Best stat wins <b>everyone's</b> card that round. Ties? Cards go to the pile — next winner takes them all.</span></div>
     <div class="rules-step"><span class="rs-n">5</span><span class="rs-t">Rules get a <b>USED</b> stamp once played. After all 6 are used they <b>remix</b> with opposite directions.</span></div>
     <div class="rules-step"><span class="rs-n">6</span><span class="rs-t"><b>Solo:</b> First to empty the other's deck wins. <b>Live Table:</b> Last player with cards wins!</span></div>
-    <div class="rules-step"><span class="rs-n">⏱</span><span class="rs-t"><b>7 second timer</b> — in Live Table, if you don't pick a rule in time, <em>Too slow dude! You lose that round!</em></span></div>
+    <div class="rules-step"><span class="rs-n">⏱</span><span class="rs-t"><b>15 second timer</b> — in Live Table, if you don't pick a rule in time, <em>Too slow dude! You lose that round!</em></span></div>
     <hr class="rules-hr">
     <div class="rules-step" style="margin-top:12px"><span class="rs-n">🔄</span><span class="rs-t"><b>SWAP POWER</b> — Before picking a rule, swap your card with the Trolley Master's (solo only). 2 per game.</span></div>
     <button class="rules-play-btn" onclick="closeRules()">GOT IT — LET'S PLAY!</button>
@@ -1312,6 +1396,11 @@ function enterWaiting(){
   document.getElementById('waiting-sub').textContent=amHost
     ?'Share this code with friends to join'
     :'Waiting for host to start...';
+
+  // Show rules popup to joining player (not host — they know the game)
+  if(!amHost){
+    setTimeout(()=>openPregameRules(), 400);
+  }
 
   let prevPlayerCount = 1; // track to detect new arrivals
 
@@ -1815,9 +1904,9 @@ function showTooSlowAnnounce(playerName, onDone){
   const el  = document.getElementById('mod-announce');
   const bar = document.getElementById('ma-bar');
   document.getElementById('ma-player').textContent = playerName.toUpperCase();
-  document.getElementById('ma-chose').textContent  = '⏱';
+  document.getElementById('ma-chose').textContent  = '⏱ TOO SLOW!';
   document.getElementById('ma-icon').textContent   = '😴';
-  document.getElementById('ma-rule').textContent   = 'TOO SLOW DUDE!';
+  document.getElementById('ma-rule').textContent   = 'LOSES THEIR CARD!';
 
   // Buzzer sound
   try{
@@ -1921,12 +2010,19 @@ function showModAnnounce(playerName, mod, onDone){
 }
 
 function showRoundResult(rs, room){
+  const roundNum  = rs.roundNum||0;
+  const allHands  = (room&&room.hands)  ? room.hands  : mpHands;
+  const allScores = (room&&room.scores) ? room.scores : mpScores;
+  const slowName  = mpPlayers[rs.pickedBy]?.name || 'Player';
+
+  // ── TOO SLOW — no stat battle, slow player forfeits card ──
+  if(rs.tooSlow){
+    showTooSlowAnnounce(slowName, ()=>resolveTooSlow(rs, room, allScores, roundNum));
+    return;
+  }
+
   const mod = [...MOD_SET_A,...MOD_SET_B].find(m=>m.id===rs.modId && m.type===rs.modType);
   if(!mod) return;
-
-  const allHands  = room.hands||{};
-  const allScores = room.scores||{};
-  const roundNum  = rs.roundNum||0;
 
   // Stamp the mod as used on everyone's grid
   document.querySelectorAll('.mod-cell').forEach(c=>{
@@ -1938,12 +2034,48 @@ function showRoundResult(rs, room){
 
   // Show announcement popup first, then resolve
   const pickerName = mpPlayers[rs.pickedBy]?.name || 'Player';
-  if(rs.tooSlow){
-    // Special "too slow" announcement
-    showTooSlowAnnounce(pickerName, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
-  } else {
-    showModAnnounce(pickerName, mod, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
+  showModAnnounce(pickerName, mod, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
+}
+
+// ── TOO SLOW RESOLUTION — slow player loses their card to opponent ──
+function resolveTooSlow(rs, room, allScores, roundNum){
+  const slowPid   = rs.pickedBy;
+  const winnerPid = mpTurnOrder.find(pid=>pid!==slowPid);
+  if(!winnerPid) return;
+
+  const slowName   = mpPlayers[slowPid]?.name   || 'Player';
+  const winnerName = mpPlayers[winnerPid]?.name || 'Player';
+
+  // Show result — slow player loses, winner gets card
+  const resultScores = mpTurnOrder.map(pid=>({
+    pid,
+    name: mpPlayers[pid]?.name||pid,
+    val:  pid===slowPid ? '😴 forfeited' : '🏆 +1 card',
+    winner: pid===winnerPid
+  }));
+
+  const iWon = winnerPid===myId;
+  if(iWon){ sfxRoundWin(); showMPResult('win','⚡',winnerName+' WINS!','Opponent too slow — card forfeited!', resultScores); }
+  else     { sfxRoundLose(); showMPResult('lose','😴',slowName+' TOO SLOW!','Card forfeited to opponent!', resultScores); }
+
+  // Host updates scores — slow player loses 1 card to winner
+  if(amHost){
+    setTimeout(async()=>{
+      const newScores = {...allScores};
+      const pile = room?.pile||0;
+      newScores[slowPid]   = Math.max(0,(newScores[slowPid]||0) - 1);
+      newScores[winnerPid] = (newScores[winnerPid]||0) + 1 + pile;
+      mpScores = {...newScores};
+      await roomRef.update({ scores:newScores, turn:roundNum+1, pile:0, roundState:null });
+    }, 5000);
   }
+
+  // Advance round
+  setTimeout(()=>{
+    const stillIn = mpTurnOrder.filter(pid=>(mpScores[pid]||0)>0);
+    if(stillIn.length<=1){ endMPGame(stillIn[0]||winnerPid); return; }
+    showMPRound(roundNum+1, null);
+  }, 5500);
 }
 
 function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
@@ -2456,6 +2588,45 @@ function doShare(){
 }
 
 // ══════════════════════════════════════════════════════
+//  PRE-GAME RULES POPUP
+// ══════════════════════════════════════════════════════
+let pregameTimer = null;
+let pregameCountdown = null;
+
+function openPregameRules(){
+  const el = document.getElementById('pregame-rules');
+  const fill = document.getElementById('pgr-bar-fill');
+  const countdownEl = document.getElementById('pgr-countdown');
+  el.classList.add('open');
+
+  // Start progress bar shrinking
+  setTimeout(()=>{ fill.style.width='0%'; }, 50);
+
+  // Countdown text
+  let secs = 15;
+  countdownEl.textContent = `Auto-closing in ${secs} seconds...`;
+  pregameCountdown = setInterval(()=>{
+    secs--;
+    if(secs>0) countdownEl.textContent=`Auto-closing in ${secs} second${secs!==1?'s':''}...`;
+    else clearInterval(pregameCountdown);
+  }, 1000);
+
+  // Auto close after 15s
+  pregameTimer = setTimeout(()=>closePregameRules(), 15000);
+}
+
+function closePregameRules(){
+  if(pregameTimer){ clearTimeout(pregameTimer); pregameTimer=null; }
+  if(pregameCountdown){ clearInterval(pregameCountdown); pregameCountdown=null; }
+  const el = document.getElementById('pregame-rules');
+  el.classList.remove('open');
+  // Reset bar for next time
+  const fill = document.getElementById('pgr-bar-fill');
+  fill.style.transition='none'; fill.style.width='100%';
+  setTimeout(()=>fill.style.transition='', 50);
+}
+
+// ══════════════════════════════════════════════════════
 //  TURN TIMER
 // ══════════════════════════════════════════════════════
 let turnTimerHandle = null;
@@ -2471,7 +2642,7 @@ function startTurnTimer(roundNum){
   fill.style.width = '100%';
 
   setTimeout(()=>{
-    fill.style.transition = 'width 7s linear';
+    fill.style.transition = 'width 15s linear';
     fill.style.width = '0%';
   }, 50);
 
@@ -2479,32 +2650,18 @@ function startTurnTimer(roundNum){
     if(!canInteract) return; // already picked — ignore
     canInteract = false;
     clearTurnTimer();
+    lockMods(true);
     sfxRoundLose();
 
-    // Find first unused mod BEFORE locking (locking adds .locked class which breaks selector)
-    const unusedCell = document.querySelector('.mod-cell:not(.used)');
-    if(!unusedCell){ setStatus('⏱ Too slow!'); return; }
-    const idx = parseInt(unusedCell.dataset.idx);
-    const mod = currentMods[idx];
-    if(!mod){ setStatus('⏱ Too slow!'); return; }
-
-    // Now lock and stamp
-    lockMods(true);
-    unusedCell.classList.add('used');
-
-    // Write to Firebase — fires announcement + round resolution on ALL screens
+    // No stat picked — slow player just forfeits their card to opponent
+    // Write tooSlow penalty to Firebase — no modId needed
     db.ref('rooms/'+roomCode+'/roundState').set({
-      modId:    mod.id,
-      modType:  mod.type,
-      modUnit:  mod.unit,
-      modLabel: mod.label,
-      modIcon:  '⏱',
-      pickedBy: myId,
       tooSlow:  true,
+      pickedBy: myId,  // this is the slow player who loses their card
       roundNum: currentTurnIdx,
       ts: Date.now()
     }).catch(e=>console.error('Timer Firebase write failed:', e));
-  }, 7000);
+  }, 15000);
 }
 
 function clearTurnTimer(){
