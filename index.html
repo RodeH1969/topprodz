@@ -1564,6 +1564,7 @@ function leaveRoom(){
 let lastHandledRound = -1; // prevent double-handling same round
 let lastSwapTs = 0;          // prevent double-handling same swap
 let mpPile = 0;              // current pile count
+let mpGameOver = false;      // prevent showMPRound firing after game ends
 
 function enterMPGame(room){
   if(document.getElementById('game').style.display==='flex')return;
@@ -1574,6 +1575,7 @@ function enterMPGame(room){
   mpHands=room.hands||{};
   currentTurnIdx=room.turn||0;
   lastHandledRound=-1;
+  mpGameOver=false;
 
   // Build my full hand as local deck (indexed by round number)
   const myHandNames=mpHands[myId]||[];
@@ -1801,6 +1803,7 @@ function sfxDealIntro(){
 //  SHOW A ROUND (called on enter + after each result)
 // ══════════════════════════════════════════════════════
 function showMPRound(roundNum, room){
+  if(mpGameOver) return; // game finished — don't start a new round
   // If no room data passed, use cached mpHands (already populated on game enter)
   const allHands = (room && room.hands) ? room.hands : mpHands;
   const scores   = (room && room.scores) ? room.scores : mpScores;
@@ -2220,6 +2223,8 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
 }
 
 function endMPGame(winnerPid){
+  if(mpGameOver) return; // already showing — don't fire twice
+  mpGameOver = true;
   const won = winnerPid===myId;
   const winnerName = mpPlayers[winnerPid]?.name || 'Someone';
 
@@ -2782,6 +2787,7 @@ function restartGame(){
   playerDeck=[];compDeck=[];tiePile=[];roundHistory=[];
   activePlayer=null;activeComp=null;
   swapsLeft=2;canInteract=false;gameStarted=false;modSetToggle=false;
+  mpGameOver=false;
   clearTurnTimer();
   ['player-count','comp-count','s-player','s-comp'].forEach(id=>document.getElementById(id).textContent='-');
   document.getElementById('pile-n').textContent='0';
