@@ -1058,6 +1058,7 @@ body {
     <div id="go-title-l" style="font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:4px;color:#f87171;text-align:center"></div>
     <div id="go-sub-l" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);text-align:center;animation:pulse-orange 1.5s ease-in-out infinite">BETTER LUCK NEXT TIME!</div>
     <div id="go-sub-l2" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:rgba(255,255,255,0.45);text-align:center"></div>
+    <button class="go-btn share" onclick="doShare()" style="margin-top:6px">📣 Share Result</button>
     <button class="go-btn" onclick="restartGame()">🔄 PLAY AGAIN</button>
   </div>
 
@@ -2233,20 +2234,23 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
         return; // tie — no winner check needed
       }
 
-      // Check for winner BEFORE writing so we can set status:finished atomically
-      const stillAlive = mpTurnOrder.filter(pid=>(newScores[pid]||0)>0);
+      // Derive winner from actual scores — not just mpTurnOrder
+      const scorePids  = Object.keys(newScores||{});
+      const stillAlive = scorePids.filter(pid=>(newScores[pid]||0)>0);
       const gameOver   = stillAlive.length <= 1;
-      const winnerPid  = stillAlive[0] || winners[0];
 
-      if(gameOver){
-        // Write everything including finished status in one update
+      // Fallback winner: round winner → highest score → first in order
+      let winnerPid = stillAlive[0];
+      if(!winnerPid){
+        winnerPid = winners?.[0] ||
+          scorePids.sort((a,b)=>(newScores[b]||0)-(newScores[a]||0))[0] ||
+          null;
+      }
+
+      if(gameOver && winnerPid){
         await roomRef.update({
-          scores:     newScores,
-          turn:       newTurn,
-          pile:       0,
-          roundState: null,
-          status:     'finished',
-          winner:     winnerPid
+          scores:newScores, turn:newTurn, pile:0, roundState:null,
+          status:'finished', winner:winnerPid
         });
       } else {
         await roomRef.update({ scores:newScores, turn:newTurn, pile:0, roundState:null });
@@ -2271,26 +2275,30 @@ function endMPGame(winnerPid){
 
   const won        = winnerPid === myId;
   const winnerName = mpPlayers[winnerPid]?.name || 'Someone';
-  const loserPid   = mpTurnOrder.find(pid => pid !== winnerPid);
-  const loserName  = loserPid ? (mpPlayers[loserPid]?.name || 'You') : 'You';
 
-  // Hide all sections
-  ['go-winner','go-loser','go-solo'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'none';
+  const losers = mpTurnOrder
+    .filter(pid=>pid!==winnerPid)
+    .map(pid=>mpPlayers[pid]?.name||'Player')
+    .filter(Boolean);
+  const loserSummary = losers.length===0 ? 'everyone' :
+    losers.length===1 ? losers[0] :
+    losers.slice(0,-1).join(', ')+' & '+losers.slice(-1);
+
+  ['go-winner','go-loser','go-solo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
   });
 
   if(won){
-    document.getElementById('go-title-w').textContent = '🎉 ' + myName.toUpperCase() + ' WINS!';
-    document.getElementById('go-sub-w').textContent   = 'You emptied ' + loserName + "'s cart — champion!";
+    document.getElementById('go-title-w').textContent = '🎉 '+myName.toUpperCase()+' WINS!';
+    document.getElementById('go-sub-w').textContent   = 'Last player standing — beat '+loserSummary+'!';
     document.getElementById('go-winner').style.display = 'flex';
     sfxJackpot();
     launchFireworks();
-    setTimeout(() => document.getElementById('gameover').classList.add('open'), 800);
+    setTimeout(()=>document.getElementById('gameover').classList.add('open'), 800);
   } else {
-    document.getElementById('go-title-l').textContent = '🏆 ' + winnerName.toUpperCase() + ' WINS!';
-    document.getElementById('go-sub-l2').textContent  = winnerName + ' emptied your cart this time...';
-    document.getElementById('go-loser').style.display = 'flex';
+    document.getElementById('go-title-l').textContent  = '🏆 '+winnerName.toUpperCase()+' WINS!';
+    document.getElementById('go-sub-l2').textContent   = winnerName+' was the last player standing.';
+    document.getElementById('go-loser').style.display  = 'flex';
     sfxGameLose();
     document.getElementById('gameover').classList.add('open');
   }
@@ -2542,75 +2550,89 @@ function buildCardFace(who,product){
 }
 
 let swapInProgress = false;
+
 function doSwap(){
-  if(swapInProgress||swapsLeft<=0||!activePlayer)return;
-  // Allow swap even if canInteract is briefly false during animation
-  // but not after a mod has been picked (roundState exists)
-  if(!isMP && !canInteract) return; // solo: respect canInteract
-  swapInProgress=true;
-  setTimeout(()=>swapInProgress=false, 2500);
+  if(swapInProgress || swapsLeft<=0 || !activePlayer) return;
+  if(!canInteract) return;
 
   if(isMP){
-    // MP swap: steal a random opponent's card for this round
-    // Pick a random opponent who has a card this round
-    const roundNum = currentTurnIdx;
-    const opponents = mpTurnOrder.filter(pid=>pid!==myId);
-    if(opponents.length===0) return;
+    const activePid = mpTurnOrder[currentTurnIdx % mpTurnOrder.length];
+    if(activePid !== myId) return;
+    if((mpScores[myId]||0) <= 0) return;
+
+    const roomRound = currentTurnIdx;
+    const opponents = mpTurnOrder.filter(pid=>
+      pid !== myId &&
+      (mpScores[pid]||0) > 0 &&
+      (mpHands[pid]||[])[roomRound % Math.max((mpHands[pid]||[]).length,1)]
+    );
+
+    if(opponents.length===0){ setStatus('No valid opponent card to swap.'); return; }
+
     const targetPid = opponents[Math.floor(Math.random()*opponents.length)];
     const targetHandNames = mpHands[targetPid]||[];
-    const targetCardName = targetHandNames[roundNum];
+    const targetCardName  = targetHandNames[roomRound % Math.max(targetHandNames.length,1)];
     const targetCard = ALL_PRODUCTS.find(p=>p.name===targetCardName);
-    if(!targetCard) return;
 
-    swapsLeft--;sfxSwap();
-    document.getElementById('swap-n').textContent=swapsLeft+' swaps left';
-    document.getElementById('swap-btn').disabled=true;
+    if(!targetCard){ setStatus('Swap failed — card not found.'); return; }
 
-    // Swap my active card with their card
-    const myOldCard = activePlayer;
-    activePlayer = targetCard;
+    swapInProgress = true;
 
-    // Rebuild my card display
-    buildCardFace('player', activePlayer);
-    const pi=document.getElementById('player-inner');
-    pi.style.transition='none'; pi.classList.remove('flipped');
-    setTimeout(()=>{ pi.style.transition=''; pi.classList.add('flipped'); }, 100);
+    try{
+      swapsLeft--;
+      sfxSwap();
+      document.getElementById('swap-n').textContent = swapsLeft+' swaps left';
+      document.getElementById('swap-btn').disabled = true;
 
-    const oppName = mpPlayers[targetPid]?.name || 'opponent';
-    setStatus(`🃏 Stole ${oppName}'s card! Now pick your stat...`);
+      const myOldCard = activePlayer;
+      activePlayer = targetCard;
 
-    // Write swap override to Firebase — resolveRound reads this
-    // myId is now playing targetCard, targetPid is now playing myOldCard
-    db.ref('rooms/'+roomCode).update({
-      lastSwap: {
-        byId:        myId,
-        byName:      myName,
-        from:        oppName,
-        fromPid:     targetPid,
-        myNewCard:   targetCard.name,
-        theirNewCard: myOldCard.name,
-        roundNum:    roundNum,
-        ts:          Date.now()
-      }
-    });
+      buildCardFace('player', activePlayer);
+      const pi = document.getElementById('player-inner');
+      pi.style.transition='none'; pi.classList.remove('flipped');
+      setTimeout(()=>{ pi.style.transition=''; pi.classList.add('flipped'); }, 100);
+
+      const oppName = mpPlayers[targetPid]?.name||'opponent';
+      setStatus(`🃏 Stole ${oppName}'s card! Now pick your stat...`);
+
+      db.ref('rooms/'+roomCode).update({
+        lastSwap:{
+          byId:myId, byName:myName, from:oppName, fromPid:targetPid,
+          myNewCard:targetCard.name, theirNewCard:myOldCard.name,
+          roundNum:roomRound, ts:Date.now()
+        }
+      }).catch(()=>setStatus('Swap failed to sync.'))
+        .finally(()=>setTimeout(()=>{ swapInProgress=false; }, 300));
+    }catch(err){
+      swapInProgress=false;
+      setStatus('Swap failed.');
+    }
     return;
   }
 
-  // Solo swap — original logic
-  swapsLeft--;sfxSwap();
-  document.getElementById('swap-n').textContent=swapsLeft+' swaps left';
-  document.getElementById('swap-btn').disabled=true;
-  [activePlayer,activeComp]=[activeComp,activePlayer];
-  buildCardFace('player',activePlayer);buildCardFace('comp',activeComp);
-  const pi=document.getElementById('player-inner');
-  pi.style.transition='none';pi.classList.remove('flipped');
-  setTimeout(()=>{pi.style.transition='';pi.classList.add('flipped');},100);
-  setStatus('🃏 Swapped! Now pick your stat...');
-  const t=document.getElementById('swap-toast');
-  document.getElementById('swap-toast-txt').textContent='Cards swapped!';
-  t.classList.remove('out');t.classList.add('show');
-  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.classList.remove('show','out'),250);},1800);
+  // Solo swap
+  swapInProgress = true;
+  try{
+    swapsLeft--;
+    sfxSwap();
+    document.getElementById('swap-n').textContent = swapsLeft+' swaps left';
+    document.getElementById('swap-btn').disabled = true;
+    [activePlayer,activeComp]=[activeComp,activePlayer];
+    buildCardFace('player',activePlayer);
+    buildCardFace('comp',activeComp);
+    const pi=document.getElementById('player-inner');
+    pi.style.transition='none'; pi.classList.remove('flipped');
+    setTimeout(()=>{ pi.style.transition=''; pi.classList.add('flipped'); },100);
+    setStatus('🃏 Swapped! Now pick your stat...');
+    const t=document.getElementById('swap-toast');
+    document.getElementById('swap-toast-txt').textContent='Cards swapped!';
+    t.classList.remove('out'); t.classList.add('show');
+    setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.classList.remove('show','out'),250); },1800);
+  }finally{
+    setTimeout(()=>{ swapInProgress=false; },500);
+  }
 }
+
 
 function updateCounts(){
   if(isMP){
@@ -2658,178 +2680,53 @@ function doShare(){
   const url = location.origin + location.pathname;
   let text;
 
+  const isWinnerOpen = document.getElementById('go-winner')?.style.display==='flex';
+  const isLoserOpen  = document.getElementById('go-loser')?.style.display==='flex';
+  const isSoloOpen   = document.getElementById('go-solo')?.style.display==='flex';
+
   if(isMP){
-    const rematch = roomCode ? `\n\nRematch? Room ${roomCode} is still open 👇\n${url}?join=${roomCode}` : `\n\n👉 ${url}`;
-    // Build loser names list
-    const losers = mpTurnOrder
-      .filter(pid => pid !== myId)
-      .map(pid => mpPlayers[pid]?.name || 'them')
-      .filter(Boolean);
-    const loserStr = losers.length === 1
-      ? losers[0]
-      : losers.slice(0,-1).join(', ') + ' & ' + losers.slice(-1);
-    // His/her/their cart
-    const pronoun = losers.length === 1 ? 'their' : 'their';
-    text = `🛒 TOP PROD — ${getDailyStr()}\n\n🏆 Just wiped the floor with ${loserStr} in a Live Table!\n\nLast player standing — emptied ${pronoun} cart!\n\nThink you can beat me?${rematch}`;
+    const rematch = roomCode
+      ? `\n\nRematch? Room ${roomCode} is still open 👇\n${url}?join=${roomCode}`
+      : `\n\n👉 ${url}`;
+
+    if(isWinnerOpen){
+      const losers = mpTurnOrder
+        .filter(pid=>pid!==myId)
+        .map(pid=>mpPlayers[pid]?.name||'them')
+        .filter(Boolean);
+      const loserStr = losers.length===1 ? losers[0] :
+        losers.length>1 ? losers.slice(0,-1).join(', ')+' & '+losers.slice(-1) : 'the table';
+      text = `🛒 TOP PROD — ${getDailyStr()}\n\n🏆 I won a Live Table!\nBeat ${loserStr} and finished last player standing.\n\nThink you can beat me?${rematch}`;
+    } else if(isLoserOpen){
+      const shownWinner = document.getElementById('go-title-l')?.textContent
+        ?.replace(/^🏆\s*/,'').replace(/\s+WINS!$/,'') || 'Someone';
+      text = `🛒 TOP PROD — ${getDailyStr()}\n\n😅 ${shownWinner} won our Live Table.\nI'm coming back for the rematch.${rematch}`;
+    } else {
+      text = `🛒 TOP PROD — ${getDailyStr()}\n\nLive Table battle finished.\n👉 ${url}`;
+    }
   } else {
     const wins = roundHistory.filter(r=>r==='w').length;
-    const sq = roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
+    const sq   = roundHistory.map(r=>r==='w'?'🟩':r==='l'?'🟥':'🟦').join('');
     text = `🛒 TOP PROD — ${getDailyStr()}\n\n${wins} wins vs the Trolley Master!\n${sq}\n\n🟩 My wins  🟥 TM wins  🟦 Tie\n\nCan you do better? 👉 ${url}`;
   }
 
+  const visibleShareBtn = Array.from(document.querySelectorAll('.go-btn.share'))
+    .find(btn=>btn.offsetParent!==null);
+
   if(navigator.share){
-    navigator.share({title:'TOP PROD',text,url}).catch(()=>{});
-  } else {
-    navigator.clipboard.writeText(text).then(()=>{
-      const b=document.querySelector('.go-btn.share');
-      b.textContent='✅ Copied — send it!';
-      setTimeout(()=>b.textContent='📣 Share Result',2500);
-    });
+    navigator.share({title:'TOP PROD', text, url}).catch(()=>{});
+    return;
   }
-}
 
-// ══════════════════════════════════════════════════════
-//  PRE-GAME RULES POPUP
-// ══════════════════════════════════════════════════════
-let pregameTimer = null;
-let pregameCountdown = null;
-
-function openPregameRules(){
-  const el = document.getElementById('pregame-rules');
-  const fill = document.getElementById('pgr-bar-fill');
-  const countdownEl = document.getElementById('pgr-countdown');
-  el.classList.add('open');
-
-  // Start progress bar shrinking
-  setTimeout(()=>{ fill.style.width='0%'; }, 50);
-
-  // Countdown text
-  let secs = 20;
-  countdownEl.textContent = `Auto-closing in ${secs} seconds...`;
-  pregameCountdown = setInterval(()=>{
-    secs--;
-    if(secs>0) countdownEl.textContent=`Auto-closing in ${secs} second${secs!==1?'s':''}...`;
-    else clearInterval(pregameCountdown);
-  }, 1000);
-
-  // Auto close after 15s
-  pregameTimer = setTimeout(()=>closePregameRules(), 20000);
-}
-
-function closePregameRules(){
-  if(pregameTimer){ clearTimeout(pregameTimer); pregameTimer=null; }
-  if(pregameCountdown){ clearInterval(pregameCountdown); pregameCountdown=null; }
-  const el = document.getElementById('pregame-rules');
-  el.classList.remove('open');
-  // Reset bar for next time
-  const fill = document.getElementById('pgr-bar-fill');
-  fill.style.transition='none'; fill.style.width='100%';
-  setTimeout(()=>fill.style.transition='', 50);
-}
-
-// ══════════════════════════════════════════════════════
-//  TURN TIMER
-// ══════════════════════════════════════════════════════
-let turnTimerHandle = null;
-let turnTimerRound  = -1;
-
-function startTurnTimer(roundNum){
-  clearTurnTimer();
-  turnTimerRound = roundNum;
-  const bar  = document.getElementById('turn-timer-bar');
-  const fill = document.getElementById('turn-timer-fill');
-  bar.style.display = 'block';
-  fill.style.transition = 'none';
-  fill.style.width = '100%';
-
-  setTimeout(()=>{
-    fill.style.transition = 'width 20s linear';
-    fill.style.width = '0%';
-  }, 50);
-
-  turnTimerHandle = setTimeout(()=>{
-    if(!canInteract) return; // already picked — ignore
-    canInteract = false;
-    clearTurnTimer();
-    lockMods(true);
-    sfxRoundLose();
-
-    // No stat picked — slow player just forfeits their card to opponent
-    // Write tooSlow penalty to Firebase — no modId needed
-    db.ref('rooms/'+roomCode+'/roundState').set({
-      tooSlow:  true,
-      pickedBy: myId,  // this is the slow player who loses their card
-      roundNum: currentTurnIdx,
-      ts: Date.now()
-    }).catch(e=>console.error('Timer Firebase write failed:', e));
-  }, 20000);
-}
-
-function clearTurnTimer(){
-  if(turnTimerHandle){ clearTimeout(turnTimerHandle); turnTimerHandle=null; }
-  const bar = document.getElementById('turn-timer-bar');
-  if(bar) bar.style.display='none';
-}
-
-// ══════════════════════════════════════════════════════
-//  FIREWORKS
-// ══════════════════════════════════════════════════════
-function launchFireworks(){
-  const canvas = document.getElementById('fireworks-canvas');
-  const ctx2   = canvas.getContext('2d');
-  canvas.style.display = 'block';
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-
-  const particles = [];
-  const colors = ['#FFD700','#FF6600','#4ade80','#f87171','#60a5fa','#f472b6','#fff'];
-
-  function spawnBurst(x, y){
-    for(let i=0;i<60;i++){
-      const angle = Math.random()*Math.PI*2;
-      const speed = 2+Math.random()*6;
-      particles.push({
-        x, y,
-        vx: Math.cos(angle)*speed,
-        vy: Math.sin(angle)*speed - 2,
-        alpha: 1,
-        color: colors[Math.floor(Math.random()*colors.length)],
-        size: 3+Math.random()*4,
-        gravity: 0.12
-      });
+  navigator.clipboard.writeText(text).then(()=>{
+    if(visibleShareBtn){
+      const old = visibleShareBtn.textContent;
+      visibleShareBtn.textContent = '✅ Copied!';
+      setTimeout(()=>visibleShareBtn.textContent=old, 1500);
     }
-  }
-
-  // Spawn 6 bursts at random positions
-  const bursts = [
-    [0.2,0.3],[0.8,0.25],[0.5,0.15],[0.15,0.6],[0.85,0.55],[0.5,0.45]
-  ];
-  bursts.forEach(([rx,ry],i)=>{
-    setTimeout(()=>spawnBurst(rx*canvas.width, ry*canvas.height), i*300);
-  });
-
-  let frame = 0;
-  function animate(){
-    ctx2.clearRect(0,0,canvas.width,canvas.height);
-    for(let i=particles.length-1;i>=0;i--){
-      const p=particles[i];
-      p.x+=p.vx; p.y+=p.vy; p.vy+=p.gravity;
-      p.vx*=0.98; p.alpha-=0.013;
-      if(p.alpha<=0){particles.splice(i,1);continue;}
-      ctx2.save();
-      ctx2.globalAlpha=p.alpha;
-      ctx2.fillStyle=p.color;
-      ctx2.beginPath();
-      ctx2.arc(p.x,p.y,p.size,0,Math.PI*2);
-      ctx2.fill();
-      ctx2.restore();
-    }
-    frame++;
-    if(frame<240) requestAnimationFrame(animate);
-    else{ ctx2.clearRect(0,0,canvas.width,canvas.height); canvas.style.display='none'; }
-  }
-  animate();
+  }).catch(()=>alert(text));
 }
+
 
 function restartGame(){
   if(isMP){
