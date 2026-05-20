@@ -2476,26 +2476,23 @@ function startTurnTimer(roundNum){
   }, 50);
 
   turnTimerHandle = setTimeout(()=>{
-    if(!canInteract) return; // already picked — timer fired late, ignore
+    if(!canInteract) return; // already picked — ignore
     canInteract = false;
-    lockMods(true);
     clearTurnTimer();
     sfxRoundLose();
 
-    // Find first unused mod to auto-pick
-    const unusedCell = document.querySelector('.mod-cell:not(.used):not(.locked)');
-    if(!unusedCell){
-      // All used — shouldn't happen but safety net
-      setStatus('⏱ Too slow!');
-      return;
-    }
+    // Find first unused mod BEFORE locking (locking adds .locked class which breaks selector)
+    const unusedCell = document.querySelector('.mod-cell:not(.used)');
+    if(!unusedCell){ setStatus('⏱ Too slow!'); return; }
     const idx = parseInt(unusedCell.dataset.idx);
     const mod = currentMods[idx];
-    if(!mod) return;
+    if(!mod){ setStatus('⏱ Too slow!'); return; }
 
-    // Show "Too Slow" announcement popup to BOTH players via Firebase
-    // Write to Firebase first — the announcement fires from roundState on all screens
-    // We inject a special "tooSlow" flag into the roundState
+    // Now lock and stamp
+    lockMods(true);
+    unusedCell.classList.add('used');
+
+    // Write to Firebase — fires announcement + round resolution on ALL screens
     db.ref('rooms/'+roomCode+'/roundState').set({
       modId:    mod.id,
       modType:  mod.type,
@@ -2506,10 +2503,7 @@ function startTurnTimer(roundNum){
       tooSlow:  true,
       roundNum: currentTurnIdx,
       ts: Date.now()
-    });
-
-    // Stamp mod locally
-    unusedCell.classList.add('used');
+    }).catch(e=>console.error('Timer Firebase write failed:', e));
   }, 7000);
 }
 
