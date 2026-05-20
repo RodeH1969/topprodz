@@ -1597,7 +1597,9 @@ async function hostStart(){
     modSet:0,
     usedMods:[],
     roundState:null,
-    eliminated:{}
+    eliminated:{},
+    winner:null,      // clear any previous winner
+    lastSwap:null     // clear any previous swap
   });
 }
 
@@ -1672,8 +1674,11 @@ function enterMPGame(room){
     updateLiveCount();
     updateCounts();
 
-    // Game finished — show winner on ALL screens (only if we're in the game)
-    if(r.status==='finished' && r.winner && !mpGameOver && mpGameActive){
+    // Game finished — only trigger if finished AFTER we entered the game
+    const gameStartedAt = r.startedAt||0;
+    const finishedRecently = r.status==='finished' && r.winner &&
+      (Date.now() - gameStartedAt) > 2000; // must be at least 2s into the game
+    if(finishedRecently && !mpGameOver && mpGameActive){
       endMPGame(r.winner);
       return;
     }
