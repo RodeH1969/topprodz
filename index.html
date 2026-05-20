@@ -1458,6 +1458,7 @@ function enterWaiting(){
 
     // Host started — everyone enters game
     if(room.status==='playing'){
+      closePregameRules(); // dismiss rules popup immediately if still showing
       enterMPGame(room);
     }
   });
