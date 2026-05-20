@@ -1316,48 +1316,72 @@ async function doCreate(){
 }
 
 async function doJoin(){
-  const name=document.getElementById('mp-name').value.trim();
-  const code=document.getElementById('join-code').value.trim().toUpperCase().slice(0,4);
-  if(!name){setErr('Enter your name first');return;}
-  if(code.length<3){setErr('Enter room code');return;}
-  try{
-    const snap=await db.ref('rooms/'+code).once('value');
-    if(!snap.exists()){setErr('Room "'+code+'" not found — check the code');return;}
-    const room=snap.val();
+  // Disable button immediately to prevent double-tap
+  const joinBtn = document.getElementById('join-btn');
+  if(joinBtn) joinBtn.disabled = true;
 
-    // Check room hasn't expired (older than 2 hours = stale)
+  const name = document.getElementById('mp-name').value.trim();
+  const code = document.getElementById('join-code').value.trim().toUpperCase().slice(0,4);
+
+  if(!name){ setErr('Enter your name first'); if(joinBtn) joinBtn.disabled=false; return; }
+  if(code.length<3){ setErr('Enter room code'); if(joinBtn) joinBtn.disabled=false; return; }
+
+  try{
+    const snap = await db.ref('rooms/'+code).once('value');
+    if(!snap.exists()){ setErr('Room "'+code+'" not found — check the code'); if(joinBtn) joinBtn.disabled=false; return; }
+    const room = snap.val();
+
+    // Expired room
     if(room.expiresAt && Date.now() > room.expiresAt){
-      setErr('That room has expired — ask host to create a new one');return;
+      setErr('That room has expired — ask host to create a new one');
+      if(joinBtn) joinBtn.disabled=false; return;
     }
 
-    // Only block joining if game is PLAYING and was started more than 60 seconds ago
-    // (60s grace handles the race where host hits start while friend is typing)
+    // Game already in progress
     if(room.status==='playing'){
       const startedAgo = Date.now() - (room.startedAt||0);
       if(startedAgo > 60000){
-        setErr('Game already started — ask them to start a new room');return;
+        setErr('Game already started — ask them to start a new room');
+        if(joinBtn) joinBtn.disabled=false; return;
       }
     }
 
     const existingPlayers = room.players||{};
-    const count = Object.keys(existingPlayers).length;
+    const existingPids    = Object.keys(existingPlayers);
+    const count           = existingPids.length;
 
-    // Check if same name already in room — reuse that slot instead of adding duplicate
+    // Rejoin: same name already exists → reuse slot (case-insensitive)
     const existingEntry = Object.entries(existingPlayers).find(([,p])=>
       p.name.trim().toLowerCase() === name.trim().toLowerCase()
     );
     if(existingEntry){
-      // Rejoin as that player — reuse their ID
-      myName=name; myId=existingEntry[0]; amHost=false; roomCode=code;
+      const [pid] = existingEntry;
+      myName  = name;
+      myId    = pid;
+      amHost  = (room.host === pid); // correct host detection
+      roomCode = code;
       enterWaiting();
       return;
     }
 
-    if(count>=2){setErr('Room is full — max 2 players');return;}
-    myName=name; myId=uid(); amHost=false; roomCode=code;
-    await db.ref('rooms/'+code+'/players/'+myId).set({name:myName,cards:0});
+    // Hard cap — max 2 players, no exceptions
+    if(count >= 2){
+      setErr('Room is full — max 2 players only');
+      if(joinBtn) joinBtn.disabled=false; return;
+    }
+
+    // New player joining
+    myName   = name;
+    myId     = uid();
+    amHost   = false;
+    roomCode = code;
+    await db.ref('rooms/'+code+'/players/'+myId).set({name:myName, cards:0});
     enterWaiting();
-  }catch(e){setErr('Connection error: '+e.message);}
+
+  }catch(e){
+    setErr('Connection error: '+e.message);
+    if(joinBtn) joinBtn.disabled=false;
+  }
 }
 
 function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
