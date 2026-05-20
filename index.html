@@ -1587,10 +1587,12 @@ function leaveRoom(){
 let lastHandledRound = -1; // prevent double-handling same round
 let lastSwapTs = 0;          // prevent double-handling same swap
 let mpPile = 0;              // current pile count
-let mpGameOver = false;      // prevent showMPRound firing after game ends
+let mpGameOver   = false;    // prevent showMPRound firing after game ends
+let mpGameActive = false;    // true once enterMPGame has run
 
 function enterMPGame(room){
-  if(document.getElementById('game').style.display==='flex')return;
+  if(mpGameActive) return; // already entered
+  mpGameActive = true;
   isMP=true;
   mpPlayers=room.players||{};
   mpTurnOrder=room.turnOrder||[];
@@ -1599,6 +1601,7 @@ function enterMPGame(room){
   currentTurnIdx=room.turn||0;
   lastHandledRound=-1;
   mpGameOver=false;
+  mpGameActive=true;
 
   // Build my full hand as local deck (indexed by round number)
   const myHandNames=mpHands[myId]||[];
@@ -1641,9 +1644,8 @@ function enterMPGame(room){
     updateLiveCount();
     updateCounts();
 
-    // Game finished — show winner on ALL screens (only if game screen is visible)
-    if(r.status==='finished' && r.winner && !mpGameOver &&
-       document.getElementById('game').style.display==='flex'){
+    // Game finished — show winner on ALL screens (only if we're in the game)
+    if(r.status==='finished' && r.winner && !mpGameOver && mpGameActive){
       endMPGame(r.winner);
       return;
     }
@@ -1829,7 +1831,8 @@ function sfxDealIntro(){
 function showMPRound(roundNum, room){
   if(mpGameOver) return; // game finished — don't start a new round
   // If no room data passed, use cached mpHands (already populated on game enter)
-  const allHands = (room && room.hands) ? room.hands : mpHands;
+  // Always use mpHands as it's set on game enter and never changes
+  const allHands = mpHands;
   const scores   = (room && room.scores) ? room.scores : mpScores;
 
   // My card for this round
@@ -1874,8 +1877,9 @@ function showMPRound(roundNum, room){
     if(pid===myId)return;
     const inner=document.getElementById('opp-inner-'+pid);
     if(inner) inner.classList.remove('flipped');
-    // Show category hint for this opponent's card
+    // Show category hint — use swap override if active
     const oppHandNames=(allHands[pid]||[]);
+    // Note: swap hasn't happened yet at round start, show original card hint
     const oppCardName=oppHandNames[roundNum % Math.max(oppHandNames.length,1)];
     const oppCard=ALL_PRODUCTS.find(p=>p.name===oppCardName);
     if(oppCard){
@@ -2137,12 +2141,23 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
   const allHands  = (allHandsIn  && Object.keys(allHandsIn).length>0)  ? allHandsIn  : mpHands;
   const allScores = (allScoresIn && Object.keys(allScoresIn).length>0) ? allScoresIn : mpScores;
 
-  // Get each player's card for this round
+  // Check for swap override this round
+  const swap = room?.lastSwap;
+  const swapActive = swap && swap.roundNum === roundNum;
+
+  // Get each player's card for this round (respecting any swap)
   const cardValues={};
   mpTurnOrder.forEach(pid=>{
-    const handNames=allHands[pid]||[];
-    const cardName=handNames[roundNum % Math.max(handNames.length,1)];
-    const card=ALL_PRODUCTS.find(p=>p.name===cardName);
+    let cardName;
+    if(swapActive && pid === swap.byId){
+      cardName = swap.myNewCard;      // swapper plays stolen card
+    } else if(swapActive && pid === swap.fromPid){
+      cardName = swap.theirNewCard;   // victim plays swapper's old card
+    } else {
+      const handNames = allHands[pid]||[];
+      cardName = handNames[roundNum % Math.max(handNames.length,1)];
+    }
+    const card = ALL_PRODUCTS.find(p=>p.name===cardName);
     if(card) cardValues[pid]={card, val:card[mod.id]};
   });
 
@@ -2564,12 +2579,19 @@ function doSwap(){
     const oppName = mpPlayers[targetPid]?.name || 'opponent';
     setStatus(`🃏 Stole ${oppName}'s card! Now pick your stat...`);
 
-    // Broadcast swap to ALL players via Firebase
-    db.ref('rooms/'+roomCode+'/lastSwap').set({
-      byId:   myId,
-      byName: myName,
-      from:   oppName,
-      ts:     Date.now()
+    // Write swap override to Firebase — resolveRound reads this
+    // myId is now playing targetCard, targetPid is now playing myOldCard
+    db.ref('rooms/'+roomCode).update({
+      lastSwap: {
+        byId:        myId,
+        byName:      myName,
+        from:        oppName,
+        fromPid:     targetPid,
+        myNewCard:   targetCard.name,
+        theirNewCard: myOldCard.name,
+        roundNum:    roundNum,
+        ts:          Date.now()
+      }
     });
     return;
   }
@@ -2826,6 +2848,7 @@ function restartGame(){
   activePlayer=null;activeComp=null;
   swapsLeft=2;canInteract=false;gameStarted=false;modSetToggle=false;
   mpGameOver=false;
+  mpGameActive=false;
   clearTurnTimer();
   ['player-count','comp-count','s-player','s-comp'].forEach(id=>document.getElementById(id).textContent='-');
   document.getElementById('pile-n').textContent='0';
