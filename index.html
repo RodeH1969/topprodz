@@ -1042,11 +1042,34 @@ body {
 
 <!-- GAME OVER -->
 <div id="gameover">
-  <div id="go-emoji">🏆</div>
-  <div id="go-title">CHAMPION!</div>
-  <div id="go-sub"></div>
-  <button class="go-btn share" onclick="doShare()">📣 Share Result</button>
-  <button class="go-btn" onclick="restartGame()">PLAY AGAIN</button>
+
+  <!-- WINNER section -->
+  <div id="go-winner" style="display:none;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:320px">
+    <div id="go-emoji-w" style="font-size:90px">🏆</div>
+    <div id="go-title-w" style="font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:4px;color:#4ade80;text-align:center;text-shadow:0 0 30px rgba(74,222,128,0.5)"></div>
+    <div id="go-sub-w" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;color:rgba(255,255,255,0.6);text-align:center;letter-spacing:0.5px"></div>
+    <button class="go-btn share" onclick="doShare()" style="margin-top:6px">📣 Share Your Win!</button>
+    <button class="go-btn" onclick="restartGame()">🔄 PLAY AGAIN</button>
+  </div>
+
+  <!-- LOSER section -->
+  <div id="go-loser" style="display:none;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:320px">
+    <div style="font-size:90px">😢</div>
+    <div id="go-title-l" style="font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:4px;color:#f87171;text-align:center"></div>
+    <div id="go-sub-l" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);text-align:center;animation:pulse-orange 1.5s ease-in-out infinite">BETTER LUCK NEXT TIME!</div>
+    <div id="go-sub-l2" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;color:rgba(255,255,255,0.45);text-align:center"></div>
+    <button class="go-btn" onclick="restartGame()">🔄 PLAY AGAIN</button>
+  </div>
+
+  <!-- SOLO (unchanged) -->
+  <div id="go-solo" style="display:none;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:320px">
+    <div id="go-emoji">🏆</div>
+    <div id="go-title" style="font-family:'Bebas Neue',sans-serif;font-size:54px;letter-spacing:4px"></div>
+    <div id="go-sub" style="font-family:'Barlow Condensed',sans-serif;font-size:18px;color:rgba(255,255,255,0.55)"></div>
+    <button class="go-btn share" onclick="doShare()">📣 Share Result</button>
+    <button class="go-btn" onclick="restartGame()">PLAY AGAIN</button>
+  </div>
+
 </div>
 
 <style>
@@ -2225,31 +2248,34 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
 }
 
 function endMPGame(winnerPid){
-  if(mpGameOver) return; // already showing — don't fire twice
+  if(mpGameOver) return;
   mpGameOver = true;
   const won = winnerPid===myId;
   const winnerName = mpPlayers[winnerPid]?.name || 'Someone';
+  const loserName  = mpTurnOrder.find(pid=>pid!==winnerPid);
+  const loserNameStr = loserName ? (mpPlayers[loserName]?.name||'You') : 'You';
 
-  // Set content
-  document.getElementById('go-emoji').textContent = won ? '🏆' : '🛒';
-  document.getElementById('go-title').textContent = won ? `🎉 ${myName.toUpperCase()} WINS!` : `🏆 ${winnerName.toUpperCase()} WINS!`;
-  document.getElementById('go-title').style.color = won ? '#4ade80' : '#f87171';
-  document.getElementById('go-title').style.fontSize = '42px';
-  document.getElementById('go-sub').textContent = won
-    ? `Last player standing — you emptied ${winnerName !== myName ? winnerName+"'s" : 'their'} cart!`
-    : `${winnerName} was the last one standing — better luck next time!`;
+  // Hide all sections first
+  ['go-winner','go-loser','go-solo'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
 
-  // Show share button for winner, hide for loser (or show both)
-  const shareBtn = document.querySelector('.go-btn.share');
-  if(shareBtn) shareBtn.style.display = won ? 'block' : 'none';
-
-  won ? sfxJackpot() : sfxGameLose();
-
-  // Launch fireworks first, then show gameover popup on top
   if(won){
+    // WINNER screen
+    const winSec = document.getElementById('go-winner');
+    document.getElementById('go-title-w').textContent = `🎉 ${myName.toUpperCase()} WINS!`;
+    document.getElementById('go-sub-w').textContent   = `You emptied ${loserNameStr}'s cart — champion!`;
+    winSec.style.display = 'flex';
+    sfxJackpot();
     launchFireworks();
     setTimeout(()=>document.getElementById('gameover').classList.add('open'), 800);
   } else {
+    // LOSER screen
+    const loseSec = document.getElementById('go-loser');
+    document.getElementById('go-title-l').textContent  = `😭 ${winnerName.toUpperCase()} WINS!`;
+    document.getElementById('go-sub-l2').textContent   = `${winnerName} emptied your cart this time...`;
+    loseSec.style.display = 'flex';
+    sfxGameLose();
     document.getElementById('gameover').classList.add('open');
   }
 }
@@ -2591,13 +2617,14 @@ function closeRules(){document.getElementById('rules-modal').classList.remove('o
 
 function endGame(){
   const won=compDeck.length===0;
-  const go=document.getElementById('gameover');
+  ['go-winner','go-loser','go-solo'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  document.getElementById('go-solo').style.display='flex';
   document.getElementById('go-emoji').textContent=won?'🏆':'🛒';
   document.getElementById('go-title').textContent=won?'CHAMPION!':'TROLLED!';
   document.getElementById('go-title').style.color=won?'#4ade80':'#f87171';
   document.getElementById('go-sub').textContent=won?'You emptied the Trolley Master\'s cart!':'The Trolley Master cleaned you out.';
   won?sfxJackpot():sfxGameLose();
-  go.classList.add('open');
+  document.getElementById('gameover').classList.add('open');
 }
 
 function doShare(){
@@ -2783,6 +2810,10 @@ function restartGame(){
     isMP=false;roomCode=null;myId=null;amHost=false;
     document.getElementById('game').style.display='none';
     document.getElementById('gameover').classList.remove('open');
+  ['go-winner','go-loser','go-solo'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
     document.getElementById('lobby').style.display='flex';
     return;
   }
