@@ -1537,17 +1537,39 @@ function renderWaiting(players){
 }
 
 async function hostStart(){
-  if(!amHost)return;
+  const subEl = document.getElementById('waiting-sub');
 
-  // Re-fetch fresh player list from Firebase — don't rely on local cache
-  const freshSnap = await db.ref('rooms/'+roomCode+'/players').once('value');
-  const freshPlayers = freshSnap.val()||{};
+  if(!amHost){
+    subEl.textContent='⚠️ You are not the host!';
+    console.log('hostStart blocked: not host. amHost=',amHost);
+    return;
+  }
+  if(!roomCode){
+    subEl.textContent='⚠️ No room code found!';
+    console.log('hostStart blocked: no roomCode');
+    return;
+  }
+
+  subEl.textContent='Starting...';
+
+  // Re-fetch fresh player list from Firebase
+  let freshPlayers = {};
+  try{
+    const freshSnap = await db.ref('rooms/'+roomCode+'/players').once('value');
+    freshPlayers = freshSnap.val()||{};
+  }catch(e){
+    subEl.textContent='⚠️ Firebase error: '+e.message;
+    console.error('hostStart Firebase error:', e);
+    return;
+  }
+
   const pids = Object.keys(freshPlayers);
+  console.log('hostStart: roomCode=',roomCode,'amHost=',amHost,'pids=',pids);
 
   if(pids.length<2){
-    document.getElementById('waiting-sub').textContent='⚠️ Need at least 1 more player to start!';
+    subEl.textContent='⚠️ Need at least 1 more player! Found: '+pids.length;
     setTimeout(()=>{
-      document.getElementById('waiting-sub').textContent='Share the code — waiting for players...';
+      subEl.textContent='Share the code — waiting for players...';
     },3000);
     return;
   }
@@ -2732,6 +2754,116 @@ function doShare(){
   }).catch(()=>alert(text));
 }
 
+
+// ══════════════════════════════════════════════════════
+//  PRE-GAME RULES POPUP
+// ══════════════════════════════════════════════════════
+let pregameTimer = null;
+let pregameCountdown = null;
+
+function openPregameRules(){
+  const el=document.getElementById('pregame-rules');
+  if(!el)return;
+  const fill=document.getElementById('pgr-bar-fill');
+  const countEl=document.getElementById('pgr-countdown');
+  el.classList.add('open');
+  if(fill){fill.style.transition='none';fill.style.width='100%';
+    setTimeout(()=>{fill.style.transition='width 20s linear';fill.style.width='0%';},50);}
+  let secs=20;
+  if(countEl) countEl.textContent='Auto-closing in '+secs+' seconds...';
+  pregameCountdown=setInterval(()=>{
+    secs--;
+    if(secs>0&&countEl) countEl.textContent='Auto-closing in '+secs+' second'+(secs!==1?'s':'')+'...';
+    else clearInterval(pregameCountdown);
+  },1000);
+  pregameTimer=setTimeout(()=>closePregameRules(),20000);
+}
+
+function closePregameRules(){
+  if(pregameTimer){clearTimeout(pregameTimer);pregameTimer=null;}
+  if(pregameCountdown){clearInterval(pregameCountdown);pregameCountdown=null;}
+  const el=document.getElementById('pregame-rules');
+  if(el) el.classList.remove('open');
+  const fill=document.getElementById('pgr-bar-fill');
+  if(fill){fill.style.transition='none';fill.style.width='100%';
+    setTimeout(()=>fill.style.transition='',50);}
+}
+
+// ══════════════════════════════════════════════════════
+//  TURN TIMER
+// ══════════════════════════════════════════════════════
+let turnTimerHandle=null;
+
+function startTurnTimer(roundNum){
+  clearTurnTimer();
+  const bar=document.getElementById('turn-timer-bar');
+  const fill=document.getElementById('turn-timer-fill');
+  if(bar) bar.style.display='block';
+  if(fill){fill.style.transition='none';fill.style.width='100%';
+    setTimeout(()=>{fill.style.transition='width 20s linear';fill.style.width='0%';},50);}
+  turnTimerHandle=setTimeout(()=>{
+    if(!canInteract)return;
+    canInteract=false;
+    clearTurnTimer();
+    lockMods(true);
+    sfxRoundLose();
+    const unusedCell=document.querySelector('.mod-cell:not(.used)');
+    if(!unusedCell){setStatus('⏱ Too slow!');return;}
+    const idx=parseInt(unusedCell.dataset.idx);
+    const mod=currentMods[idx];
+    if(!mod){setStatus('⏱ Too slow!');return;}
+    lockMods(true);
+    unusedCell.classList.add('used');
+    db.ref('rooms/'+roomCode+'/roundState').set({
+      tooSlow:true, pickedBy:myId, roundNum:currentTurnIdx, ts:Date.now()
+    }).catch(e=>console.error('Timer write failed:',e));
+  },20000);
+}
+
+function clearTurnTimer(){
+  if(turnTimerHandle){clearTimeout(turnTimerHandle);turnTimerHandle=null;}
+  const bar=document.getElementById('turn-timer-bar');
+  if(bar) bar.style.display='none';
+}
+
+// ══════════════════════════════════════════════════════
+//  FIREWORKS
+// ══════════════════════════════════════════════════════
+function launchFireworks(){
+  const canvas=document.getElementById('fireworks-canvas');
+  if(!canvas)return;
+  const ctx2=canvas.getContext('2d');
+  canvas.style.display='block';
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+  const particles=[];
+  const colors=['#FFD700','#FF6600','#4ade80','#f87171','#60a5fa','#f472b6','#fff'];
+  function spawnBurst(x,y){
+    for(let i=0;i<60;i++){
+      const angle=Math.random()*Math.PI*2, speed=2+Math.random()*6;
+      particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-2,
+        alpha:1,color:colors[Math.floor(Math.random()*colors.length)],
+        size:3+Math.random()*4,gravity:0.12});
+    }
+  }
+  [[0.2,0.3],[0.8,0.25],[0.5,0.15],[0.15,0.6],[0.85,0.55],[0.5,0.45]]
+    .forEach(([rx,ry],i)=>setTimeout(()=>spawnBurst(rx*canvas.width,ry*canvas.height),i*300));
+  let frame=0;
+  function animate(){
+    ctx2.clearRect(0,0,canvas.width,canvas.height);
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;p.vx*=0.98;p.alpha-=0.013;
+      if(p.alpha<=0){particles.splice(i,1);continue;}
+      ctx2.save();ctx2.globalAlpha=p.alpha;ctx2.fillStyle=p.color;
+      ctx2.beginPath();ctx2.arc(p.x,p.y,p.size,0,Math.PI*2);ctx2.fill();ctx2.restore();
+    }
+    frame++;
+    if(frame<240)requestAnimationFrame(animate);
+    else{ctx2.clearRect(0,0,canvas.width,canvas.height);canvas.style.display='none';}
+  }
+  animate();
+}
 
 function restartGame(){
   if(isMP){
