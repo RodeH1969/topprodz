@@ -1616,6 +1616,12 @@ function enterMPGame(room){
     updateLiveCount();
     updateCounts();
 
+    // Game finished — show winner on ALL screens
+    if(r.status==='finished' && r.winner && document.getElementById('gameover').style.display!=='flex' && !document.getElementById('gameover').classList.contains('open')){
+      endMPGame(r.winner);
+      return;
+    }
+
     // A swap happened — show popup on ALL screens
     const sw=r.lastSwap;
     if(sw && sw.ts && sw.ts !== lastSwapTs){
@@ -2095,12 +2101,8 @@ function resolveTooSlow(rs, room, allScores, roundNum){
     }, 5000);
   }
 
-  // Advance round
-  setTimeout(()=>{
-    const stillIn = mpTurnOrder.filter(pid=>(mpScores[pid]||0)>0);
-    if(stillIn.length<=1){ endMPGame(stillIn[0]||winnerPid); return; }
-    showMPRound(roundNum+1, null);
-  }, 5500);
+  // Advance round — Firebase listener handles game-over via 'winner' field
+  setTimeout(()=>{ showMPRound(roundNum+1, null); }, 5500);
 }
 
 function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
@@ -2199,21 +2201,20 @@ function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
       // Update local scores immediately so UI reflects instantly
       mpScores={...newScores};
 
-      // Sanity check — log total
-      const total = Object.values(newScores).reduce((a,b)=>a+b,0) + (pile||0);
-      console.log('Score total:', total, '| Scores:', newScores);
+      // Check for winner and write to Firebase so ALL players get the signal
+      const activePidsLeft = mpTurnOrder.filter(pid=>(newScores[pid]||0)>0);
+      if(activePidsLeft.length<=1){
+        const winnerPid = activePidsLeft[0] || winners[0];
+        await roomRef.update({ status:'finished', winner: winnerPid });
+      }
     }, 5000);
   }
 
   // All players advance to next round after overlay
+  // Firebase listener handles game-over detection via 'winner' field
+  // Just move to next round here — endMPGame fires via listener when host sets winner
   setTimeout(()=>{
     const nextRound=roundNum+1;
-    // Game ends when only 1 player has cards left (score > 0)
-    const stillIn=mpTurnOrder.filter(pid=>(mpScores[pid]||0)>0);
-    if(stillIn.length<=1){
-      endMPGame(stillIn[0]||winners[0]);
-      return;
-    }
     showMPRound(nextRound, null);
   }, 5500);
 }
