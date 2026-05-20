@@ -52,7 +52,7 @@ body {
 /* ── TICKER ── */
 #ticker {
   position:fixed; bottom:0; left:0; right:0; z-index:50;
-  height:26px; background:rgba(0,0,0,0.85);
+  height:52px; background:rgba(0,0,0,0.85);
   border-top:1px solid rgba(255,102,0,0.3);
   overflow:hidden; display:flex; align-items:center;
 }
@@ -60,7 +60,7 @@ body {
   display:flex; align-items:center;
   white-space:nowrap;
   font-family:'Barlow Condensed',sans-serif;
-  font-size:11px; font-weight:700; letter-spacing:1px;
+  font-size:16px; font-weight:700; letter-spacing:1.5px;
   color:rgba(255,255,255,0.55);
   animation:ticker-scroll 90s linear infinite;
   will-change:transform;
@@ -1538,7 +1538,12 @@ function renderWaiting(players){
 
 async function hostStart(){
   if(!amHost)return;
-  const pids=Object.keys(mpPlayers);
+
+  // Re-fetch fresh player list from Firebase — don't rely on local cache
+  const freshSnap = await db.ref('rooms/'+roomCode+'/players').once('value');
+  const freshPlayers = freshSnap.val()||{};
+  const pids = Object.keys(freshPlayers);
+
   if(pids.length<2){
     document.getElementById('waiting-sub').textContent='⚠️ Need at least 1 more player to start!';
     setTimeout(()=>{
@@ -1555,9 +1560,9 @@ async function hostStart(){
     // Give each player 5 cards as a cycling deck
     // Store full deck (all 5 cards repeated enough to last many rounds)
     // Store just the 5 cards — card lookup uses modulo so it cycles forever
-    hands[pid]=shuffled.slice(i*5,(i+1)*5).map(p=>p.name);
+    hands[pid]=shuffled.slice(i*3,(i+1)*3).map(p=>p.name);
   });
-  const scores=Object.fromEntries(pids.map(p=>[p,5]));
+  const scores=Object.fromEntries(pids.map(p=>[p,3]));
 
   await roomRef.update({
     status:'playing',
@@ -1675,7 +1680,7 @@ function enterMPGame(room){
 // ══════════════════════════════════════════════════════
 function dealMPCards(room, onComplete){
   const playerCount = mpTurnOrder.length;
-  const cardsPerPlayer = 5;
+  const cardsPerPlayer = 3;
 
   // Show the dealer deck
   const deckEl = document.getElementById('dealer-deck');
@@ -2442,7 +2447,7 @@ function startDeal(){
   document.getElementById('dealer-deck').style.display='none';
   document.getElementById('deal-btn').style.display='none';
   const shuffled=dailyShuffle(ALL_PRODUCTS);
-  playerDeck=shuffled.slice(0,5); compDeck=shuffled.slice(5,10);
+  playerDeck=shuffled.slice(0,3); compDeck=shuffled.slice(3,6);
   setStatus(`🗓️ ${getDailyStr()} — same cards for everyone today!`);
   let i=0;
   const dealerRect=document.getElementById('pile-box').getBoundingClientRect();
