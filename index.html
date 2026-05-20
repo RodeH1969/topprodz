@@ -1792,6 +1792,41 @@ function showLocalSwapToast(oppName){
 }
 
 // ══════════════════════════════════════════════════════
+//  TOO SLOW ANNOUNCEMENT
+// ══════════════════════════════════════════════════════
+function showTooSlowAnnounce(playerName, onDone){
+  const el  = document.getElementById('mod-announce');
+  const bar = document.getElementById('ma-bar');
+  document.getElementById('ma-player').textContent = playerName.toUpperCase();
+  document.getElementById('ma-chose').textContent  = '⏱';
+  document.getElementById('ma-icon').textContent   = '😴';
+  document.getElementById('ma-rule').textContent   = 'TOO SLOW DUDE!';
+
+  // Buzzer sound
+  try{
+    const ctx=getCtx(), t=ctx.currentTime;
+    const o=ctx.createOscillator(); o.type='sawtooth';
+    o.frequency.setValueAtTime(220,t);
+    o.frequency.exponentialRampToValueAtTime(80,t+0.6);
+    const wah=ctx.createBiquadFilter(); wah.type='bandpass';
+    wah.frequency.setValueAtTime(600,t); wah.Q.value=3;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.4,t);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.65);
+    o.connect(wah); wah.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t+0.7);
+  }catch(e){}
+
+  el.classList.remove('out'); el.classList.add('show');
+  setTimeout(()=>bar.classList.add('filling'), 50);
+  setTimeout(()=>{
+    el.classList.add('out');
+    bar.classList.remove('filling');
+    bar.style.transition='none'; bar.style.width='0';
+    setTimeout(()=>{ el.classList.remove('show','out'); bar.style.transition=''; onDone(); }, 400);
+  }, 2200);
+}
+
+// ══════════════════════════════════════════════════════
 //  ACTIVE PLAYER PICKS A MOD
 // ══════════════════════════════════════════════════════
 async function mpPickMod(mod){
@@ -1886,7 +1921,12 @@ function showRoundResult(rs, room){
 
   // Show announcement popup first, then resolve
   const pickerName = mpPlayers[rs.pickedBy]?.name || 'Player';
-  showModAnnounce(pickerName, mod, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
+  if(rs.tooSlow){
+    // Special "too slow" announcement
+    showTooSlowAnnounce(pickerName, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
+  } else {
+    showModAnnounce(pickerName, mod, ()=>resolveRound(rs, room, mod, allHands, allScores, roundNum));
+  }
 }
 
 function resolveRound(rs, room, mod, allHandsIn, allScoresIn, roundNum){
@@ -2419,20 +2459,40 @@ function startTurnTimer(roundNum){
   }, 50);
 
   turnTimerHandle = setTimeout(()=>{
-    if(!canInteract) return; // already picked
+    if(!canInteract) return; // already picked — timer fired late, ignore
     canInteract = false;
     lockMods(true);
     clearTurnTimer();
-    setStatus('⏱ Too slow dude! You lose that round!');
     sfxRoundLose();
 
-    // Auto-pick worst mod for the slow player — pick first unused mod
-    const unusedCell = document.querySelector('.mod-cell:not(.used)');
-    if(unusedCell){
-      const idx = parseInt(unusedCell.dataset.idx);
-      const mod = currentMods[idx];
-      if(mod) mpPickMod(mod);
+    // Find first unused mod to auto-pick
+    const unusedCell = document.querySelector('.mod-cell:not(.used):not(.locked)');
+    if(!unusedCell){
+      // All used — shouldn't happen but safety net
+      setStatus('⏱ Too slow!');
+      return;
     }
+    const idx = parseInt(unusedCell.dataset.idx);
+    const mod = currentMods[idx];
+    if(!mod) return;
+
+    // Show "Too Slow" announcement popup to BOTH players via Firebase
+    // Write to Firebase first — the announcement fires from roundState on all screens
+    // We inject a special "tooSlow" flag into the roundState
+    db.ref('rooms/'+roomCode+'/roundState').set({
+      modId:    mod.id,
+      modType:  mod.type,
+      modUnit:  mod.unit,
+      modLabel: mod.label,
+      modIcon:  '⏱',
+      pickedBy: myId,
+      tooSlow:  true,
+      roundNum: currentTurnIdx,
+      ts: Date.now()
+    });
+
+    // Stamp mod locally
+    unusedCell.classList.add('used');
   }, 7000);
 }
 
