@@ -56,18 +56,19 @@ body {
   border-top:1px solid rgba(255,102,0,0.3);
   overflow:hidden; display:flex; align-items:center;
 }
-#ticker-inner {
+.ticker-track {
+  display:flex; align-items:center;
   white-space:nowrap;
   font-family:'Barlow Condensed',sans-serif;
   font-size:11px; font-weight:700; letter-spacing:1px;
   color:rgba(255,255,255,0.55);
   animation:ticker-scroll 90s linear infinite;
-  padding-left:100%;
+  will-change:transform;
 }
-#ticker-inner span { color:var(--orange); margin:0 6px; }
+.ticker-track span { color:var(--orange); margin:0 6px; }
 @keyframes ticker-scroll {
   from { transform:translateX(0); }
-  to   { transform:translateX(-100%); }
+  to   { transform:translateX(-50%); }
 }
 
 /* Fireworks canvas */
@@ -712,7 +713,27 @@ body {
 
 <!-- TICKER -->
 <div id="ticker">
-  <div id="ticker-inner">
+  <div class="ticker-track">
+    🎿 ALDI SNOW DROP ALERT ❄️ SAT 23 MAY ⛷️ CRANE SKI SPECIALS LIVE NOW &nbsp;<span>•</span>&nbsp;
+    🟢 MEN'S PREMIUM SKI PANTS $79.99 &nbsp;<span>•</span>&nbsp;
+    🔵 WOMEN'S SNOWSUIT $79.99 &nbsp;<span>•</span>&nbsp;
+    🟣 WOMEN'S PREMIUM SKI PANTS $79.99 &nbsp;<span>•</span>&nbsp;
+    🔥 WOMEN'S THERMAL UNDERWEAR SET $29.99 &nbsp;<span>•</span>&nbsp;
+    🧤 MEN'S PREMIUM SKI GLOVES $34.99 &nbsp;<span>•</span>&nbsp;
+    🧤 WOMEN'S PREMIUM SKI GLOVES $34.99 &nbsp;<span>•</span>&nbsp;
+    🧤 PREMIUM SKI MITTENS $34.99 &nbsp;<span>•</span>&nbsp;
+    📱 TOUCHSCREEN GLOVES $9.99 &nbsp;<span>•</span>&nbsp;
+    🧦 CHILDREN'S SKI SOCKS $8.99 &nbsp;<span>•</span>&nbsp;
+    🧒 CHILDREN'S KNITTED ACCESSORIES $6.99 &nbsp;<span>•</span>&nbsp;
+    🧥 CHILDREN'S SNOW JACKET $39.99 &nbsp;<span>•</span>&nbsp;
+    👶 TODDLER SNOW SUIT $39.99 &nbsp;<span>•</span>&nbsp;
+    🏂 MEN'S SNOWBOARD JACKET $59.99 &nbsp;<span>•</span>&nbsp;
+    🎿 MEN'S SKI JACKET $59.99 &nbsp;<span>•</span>&nbsp;
+    🎿 WOMEN'S SKI JACKET $59.99 &nbsp;<span>•</span>&nbsp;
+    🧶 WOMEN'S FLEECE TOP $19.99 &nbsp;<span>•</span>&nbsp;
+    🐑 MEN'S MERINO THERMAL TOP $34.99 &nbsp;<span>•</span>&nbsp;
+    🐑 MEN'S MERINO THERMAL PANTS $34.99 &nbsp;<span>•</span>&nbsp;
+    ❄️ LIMITED STOCK · WHILE SUPPLIES LAST · SATURDAY SPECIAL BUYS ❄️ &nbsp;<span>•</span>&nbsp;
     🎿 ALDI SNOW DROP ALERT ❄️ SAT 23 MAY ⛷️ CRANE SKI SPECIALS LIVE NOW &nbsp;<span>•</span>&nbsp;
     🟢 MEN'S PREMIUM SKI PANTS $79.99 &nbsp;<span>•</span>&nbsp;
     🔵 WOMEN'S SNOWSUIT $79.99 &nbsp;<span>•</span>&nbsp;
@@ -1262,13 +1283,9 @@ function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
 // ══════════════════════════════════════════════════════
 function doInvite(){
   const url = location.origin + location.pathname + '?join=' + roomCode;
-  const text = `🛒 Hey! ${myName} is keen to play you in a live game of TOP PROD right now.
+  const text = `🛒 Hey! ${myName} wants to play you in TOP PROD right now.
 
-Tap this link to join — code pre-filled for you:
-${url}
-
-Or go to: ${location.origin + location.pathname}
-Tap Live Table → Join Room → enter code: ${roomCode}
+👉 ${url}
 
 Battle of the Product Stats — Game on! 🃏`;
   const btn = document.getElementById('invite-btn');
