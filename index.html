@@ -995,7 +995,8 @@ background-image:radial-gradient(ellipse at 20% 0%,rgba(0,61,165,0.25) 0%,transp
   <div id="waiting-sub">Share this code with friends</div>
   <div id="player-list"></div>
   <div class="spinner" id="w-spinner" style="display:none"></div>
-  <button id="start-btn" onclick="hostStart()">🚀 START GAME</button>
+  <button id="invite-btn" onclick="doInvite()" style="display:none">📲 INVITE FRIEND</button>
+  <button id="start-btn" onclick="hostStart()" style="display:none">🚀 START GAME</button>
   <button id="leave-btn" onclick="leaveRoom()">← Leave</button>
 </div>
 
@@ -1582,8 +1583,9 @@ function enterWaiting(){
   document.getElementById('lobby').style.display='none';
   document.getElementById('waiting').style.display='flex';
   document.getElementById('room-code').textContent=roomCode;
-  document.getElementById('w-spinner').style.display=amHost?'block':'none';
-  document.getElementById('start-btn').style.display='none'; // hidden until opponent joins
+  document.getElementById('w-spinner').style.display=amHost?'none':'block';
+  document.getElementById('invite-btn').style.display=amHost?'flex':'none';
+  document.getElementById('start-btn').style.display='none';
   document.getElementById('waiting-sub').textContent=amHost
     ?'Share this code with friends to join'
     :'Waiting for host to start...';
@@ -1639,6 +1641,7 @@ function enterWaiting(){
     renderWaiting(mpPlayers);
 
     if(amHost && n > 1){
+      document.getElementById('invite-btn').style.display='none';
       document.getElementById('start-btn').style.display='block';
       document.getElementById('w-spinner').style.display='none';
       // Only update sub if not currently showing join message
