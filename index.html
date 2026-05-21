@@ -1511,11 +1511,13 @@ async function doJoin(){
 }
 
 async function doJoinWithCode(){
+  const btn = document.querySelector('#join-overlay .btn.primary');
+  if(btn) btn.disabled=true;
   const name = document.getElementById('join-overlay-name').value.trim();
   const code = window._pendingJoinCode;
   const errEl = document.getElementById('join-overlay-err');
-  if(!name){ errEl.textContent='Enter your name first'; return; }
-  if(!code){ errEl.textContent='No room code found'; return; }
+  if(!name){ errEl.textContent='Enter your name first'; if(btn) btn.disabled=false; return; }
+  if(!code){ errEl.textContent='No room code found'; if(btn) btn.disabled=false; return; }
   errEl.textContent='';
 
   try{
@@ -1524,11 +1526,11 @@ async function doJoinWithCode(){
     const room = snap.val();
 
     if(room.expiresAt && Date.now() > room.expiresAt){
-      errEl.textContent='Room has expired — ask host to create a new one'; return;
+      errEl.textContent='Room has expired — ask host to create a new one'; if(btn) btn.disabled=false; return;
     }
     if(room.status==='playing'){
       const startedAgo = Date.now() - (room.startedAt||0);
-      if(startedAgo > 60000){ errEl.textContent='Game already started'; return; }
+      if(startedAgo > 60000){ errEl.textContent='Game already started'; if(btn) btn.disabled=false; return; }
     }
 
     const existingPlayers = room.players||{};
@@ -1541,13 +1543,13 @@ async function doJoinWithCode(){
       document.getElementById('join-overlay').style.display='none';
       enterWaiting(); return;
     }
-    if(Object.keys(existingPlayers).length >= 2){ errEl.textContent='Room is full'; return; }
+    if(Object.keys(existingPlayers).length >= 2){ errEl.textContent='Room is full — max 2 players'; if(btn) btn.disabled=false; return; }
 
     myName=name; myId=uid(); amHost=false; roomCode=code;
     await db.ref('rooms/'+code+'/players/'+myId).set({name:myName, cards:0});
     document.getElementById('join-overlay').style.display='none';
     enterWaiting();
-  }catch(e){ errEl.textContent='Connection error: '+e.message; }
+  }catch(e){ errEl.textContent='Connection error: '+e.message; if(btn) btn.disabled=false; }
 }
 
 function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
