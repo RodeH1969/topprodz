@@ -825,7 +825,7 @@ body {
       <div class="pgr-step"><span class="pgr-n">3</span><span class="pgr-t"><b>Best stat wins</b> everyone's card that round. Ties go to the pile — next winner takes them all.</span></div>
       <div class="pgr-step"><span class="pgr-n">4</span><span class="pgr-t">After 6 rules are used they <b>remix</b> with fresh stats.</span></div>
       <div class="pgr-step"><span class="pgr-n">🔄</span><span class="pgr-t"><b>SWAP</b> — steal your opponent's card before picking. 2 per game.</span></div>
-      <div class="pgr-step"><span class="pgr-n">🔒</span><span class="pgr-t"><b>LOCK</b> — block a battle stat once per game. In Live Table it stops your opponent using it. Solo: reveals the TM's value for that stat!</span></div>
+      <div class="pgr-step"><span class="pgr-n">🔒</span><span class="pgr-t"><b>LOCK</b> — when your opponent is picking, block one stat so they can't use it. 1 per game.</span></div>
       <div class="pgr-step"><span class="pgr-n">🏆</span><span class="pgr-t"><b>Last player with cards wins!</b></span></div>
     </div>
 
@@ -1366,7 +1366,7 @@ function startSolo(){
   document.getElementById('scoreboard').style.display='none';
   document.getElementById('turn-banner').style.display='none';
   document.getElementById('swap-area').style.display='flex';
-  document.getElementById('lock-area').style.display='flex';
+  document.getElementById('lock-area').style.display='none'; // lock is MP only
   document.getElementById('game').style.display='flex';
   document.getElementById('my-stack-lbl').textContent='Your Stack';
   buildModGrid();
@@ -2011,7 +2011,7 @@ function showMPRound(roundNum, room){
       canInteract=true;
       lockMods(false);
       if(swapsLeft>0) document.getElementById('swap-btn').disabled=false;
-      if(lockLeft>0) document.getElementById('lock-btn').disabled=false;
+      document.getElementById('lock-btn').disabled=true; // you're picking — can't lock
       setStatus('⚡ YOUR TURN — pick a battle rule!');
       startTurnTimer(roundNum);
     } else {
@@ -2021,9 +2021,9 @@ function showMPRound(roundNum, room){
       document.getElementById('lock-btn').classList.remove('active-mode');
       document.getElementById('lock-btn').textContent='🔒 LOCK';
       document.getElementById('swap-btn').disabled=true;
-      document.getElementById('lock-btn').disabled=true;
+      if(lockLeft>0) document.getElementById('lock-btn').disabled=false; // opponent picking — you can block!
       const name=mpPlayers[activePid]?.name||'Player';
-      setStatus(`⏳ ${name} is picking the battle rule...`);
+      setStatus(`⏳ ${name} is picking — 🔒 LOCK a stat to block them!`);
     }
   }, 500);
 
