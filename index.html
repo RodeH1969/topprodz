@@ -227,11 +227,12 @@ body {
 }
 .btn:active { transform:scale(0.97); }
 .btn.primary { background:var(--orange); color:#fff; box-shadow:0 4px 20px rgba(255,102,0,0.4); animation:pulse-orange 1.8s ease-in-out infinite; }
-.inp:not(:focus) { animation:inp-nudge 3s ease-in-out infinite; }
+.inp:not(:focus) { animation:inp-nudge 2.5s ease-in-out infinite; }
 @keyframes inp-nudge {
-  0%,85%,100% { border-color:rgba(255,255,255,0.12); box-shadow:none; }
-  90%          { border-color:rgba(255,102,0,0.6); box-shadow:0 0 10px rgba(255,102,0,0.25); }
+  0%,75%,100% { border-color:rgba(255,255,255,0.12); box-shadow:none; }
+  85%          { border-color:#ec4899; box-shadow:0 0 16px rgba(236,72,153,0.5), 0 0 0 2px rgba(236,72,153,0.2); }
 }
+.inp:focus { border-color:#ec4899 !important; box-shadow:0 0 12px rgba(236,72,153,0.4) !important; animation:none !important; }
 .btn.ghost {
   background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);
   border:1.5px solid rgba(255,255,255,0.12); margin-top:8px; font-size:16px;
@@ -339,16 +340,21 @@ body {
   padding:10px 24px; border-radius:20px; cursor:pointer;
 }
 #invite-btn {
-  width:100%; padding:14px;
-  background:linear-gradient(135deg,#1d4ed8,#2563eb);
+  width:100%; padding:16px;
+  background:linear-gradient(135deg,#be185d,#ec4899);
   color:#fff; border:none;
-  font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px;
+  font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px;
   border-radius:14px; cursor:pointer;
-  box-shadow:0 4px 20px rgba(37,99,235,0.45);
+  box-shadow:0 4px 24px rgba(236,72,153,0.5);
   display:flex; align-items:center; justify-content:center; gap:10px;
   transition:transform 0.1s;
+  animation:invite-pulse 1.6s ease-in-out infinite;
 }
-#invite-btn:active { transform:scale(0.97); }
+@keyframes invite-pulse {
+  0%,100% { box-shadow:0 4px 24px rgba(236,72,153,0.5); transform:scale(1); }
+  50%      { box-shadow:0 4px 40px rgba(236,72,153,0.9), 0 0 0 4px rgba(236,72,153,0.2); transform:scale(1.02); }
+}
+#invite-btn:active { transform:scale(0.97); animation:none; }
 #invite-btn.copied {
   background:linear-gradient(135deg,#15803d,#16a34a);
   box-shadow:0 4px 20px rgba(22,163,74,0.45);
@@ -555,6 +561,7 @@ body {
   font-family:'Bebas Neue',sans-serif; font-size:17px; letter-spacing:2px;
   padding:7px 14px; border-radius:20px; cursor:pointer;
   box-shadow:0 4px 16px rgba(255,102,0,0.4);
+  animation:pulse-orange 1.4s ease-in-out infinite;
 }
 
 /* mod grid */
@@ -562,6 +569,17 @@ body {
 #mod-grid.remixing { animation:remix 0.7s ease-in-out; }
 @keyframes remix { 0%{opacity:1;filter:brightness(1);} 20%{opacity:0;filter:brightness(4);} 50%{opacity:1;filter:brightness(2.5);} 100%{opacity:1;filter:brightness(1);} }
 .mod-cell { cursor:pointer; border-radius:9px; position:relative; }
+/* staggered bounce when grid first becomes active */
+.mod-grid-active .mod-cell:not(.used):nth-child(1) .mod-inner { animation:cell-nudge 2s ease-in-out 0.0s infinite; }
+.mod-grid-active .mod-cell:not(.used):nth-child(2) .mod-inner { animation:cell-nudge 2s ease-in-out 0.1s infinite; }
+.mod-grid-active .mod-cell:not(.used):nth-child(3) .mod-inner { animation:cell-nudge 2s ease-in-out 0.2s infinite; }
+.mod-grid-active .mod-cell:not(.used):nth-child(4) .mod-inner { animation:cell-nudge 2s ease-in-out 0.3s infinite; }
+.mod-grid-active .mod-cell:not(.used):nth-child(5) .mod-inner { animation:cell-nudge 2s ease-in-out 0.4s infinite; }
+.mod-grid-active .mod-cell:not(.used):nth-child(6) .mod-inner { animation:cell-nudge 2s ease-in-out 0.5s infinite; }
+@keyframes cell-nudge {
+  0%,60%,100% { transform:scale(1); }
+  70%          { transform:scale(1.06); box-shadow:0 0 10px rgba(255,102,0,0.4); }
+}
 .mod-inner {
   width:100%; height:100%; min-height:48px;
   background:var(--dark3); border:1.5px solid rgba(255,102,0,0.5);
@@ -951,9 +969,6 @@ body {
     <div class="panel-title">LIVE TABLE</div>
     <input class="inp" id="mp-name" type="text" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
     <button class="btn primary" id="create-btn" onclick="doCreate()">🃏 CREATE ROOM</button>
-    <div class="divider"><hr><span>OR JOIN A FRIEND'S ROOM</span><hr></div>
-    <input class="inp code-inp" id="join-code" type="text" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
-    <button class="btn ghost" id="join-btn" onclick="doJoin()">JOIN ROOM</button>
     <div class="err" id="lobby-err"></div>
   </div>
 </div>
@@ -2052,12 +2067,14 @@ function showMPRound(roundNum, room){
       if(swapsLeft>0) document.getElementById('swap-btn').disabled=false;
       document.getElementById('lock-btn').disabled=true; // you're picking — can't lock
       colourModGrid(activePlayer);
+      document.getElementById('mod-grid').classList.add('mod-grid-active');
       setStatus('⚡ YOUR TURN — pick a battle rule!');
       startTurnTimer(roundNum);
     } else {
       canInteract=false;
       lockMods(true);
       lockPickMode=false;
+      document.getElementById('mod-grid').classList.remove('mod-grid-active');
       document.getElementById('lock-btn').classList.remove('active-mode');
       document.getElementById('lock-btn').textContent='🔒 LOCK';
       document.getElementById('swap-btn').disabled=true;
@@ -2165,6 +2182,7 @@ async function mpPickMod(mod){
   canInteract=false;
   lockMods(true);
   clearTurnTimer();
+  document.getElementById('mod-grid').classList.remove('mod-grid-active');
   sfxBoxReveal();
 
   // Stamp used locally
@@ -2657,6 +2675,7 @@ function startRound(){
     if(lockLeft>0)document.getElementById('lock-btn').disabled=false;
     canInteract=true;
     colourModGrid(activePlayer);
+    document.getElementById('mod-grid').classList.add('mod-grid-active');
     setStatus('Pick a battle rule — choose wisely! 👇');
   },500);
 }
@@ -2701,6 +2720,7 @@ function onModClick(cell,mod,idx){
   canInteract=false;
   document.getElementById('swap-btn').disabled=true;
   document.getElementById('lock-btn').disabled=true;
+  document.getElementById('mod-grid').classList.remove('mod-grid-active');
   lockPickMode=false;
   cell.classList.add('used');sfxBoxReveal();
   setStatus(`${mod.icon} ${mod.label}! Revealing TM card...`);
