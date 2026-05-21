@@ -560,6 +560,48 @@ body {
 .mod-cell.used .mod-lbl,.mod-cell.used .mod-icon { opacity:0.2; }
 .mod-cell.locked .mod-inner { opacity:0.5; cursor:not-allowed; }
 
+/* ── STAT LOCK FEATURE ── */
+#lock-area { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:68px; }
+#lock-top { font-family:'Barlow Condensed',sans-serif; font-size:8px; font-weight:900; letter-spacing:2px; color:#a78bfa; text-transform:uppercase; text-align:center; }
+#lock-btn {
+  background:linear-gradient(135deg,#3b0764,#7c3aed);
+  color:#fff; border:2px solid #a78bfa;
+  font-family:'Bebas Neue',sans-serif; font-size:15px; letter-spacing:1px;
+  padding:9px 7px; border-radius:10px; cursor:pointer; width:100%;
+  box-shadow:0 0 12px rgba(124,58,237,0.4); transition:opacity 0.2s;
+}
+#lock-btn:disabled { opacity:0.3; cursor:not-allowed; box-shadow:none; }
+#lock-btn.active-mode {
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);
+  box-shadow:0 0 20px rgba(167,139,250,0.7);
+  animation:lock-pulse 1s ease-in-out infinite;
+}
+@keyframes lock-pulse {
+  0%,100% { box-shadow:0 0 12px rgba(167,139,250,0.5); transform:scale(1); }
+  50%      { box-shadow:0 0 28px rgba(167,139,250,1),0 0 0 3px rgba(167,139,250,0.25); transform:scale(1.04); }
+}
+#lock-n { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; color:#a78bfa; letter-spacing:1px; text-align:center; }
+#lock-hint { font-size:8px; color:rgba(255,255,255,0.25); text-align:center; letter-spacing:0.3px; font-style:italic; }
+.mod-cell.stat-locked .mod-stamp { display:none; }
+.mod-cell.stat-locked .mod-inner {
+  background:rgba(124,58,237,0.18) !important;
+  border-color:#a78bfa !important;
+  cursor:not-allowed;
+}
+.mod-cell.stat-locked .mod-icon,
+.mod-cell.stat-locked .mod-lbl { opacity:0.4; }
+.mod-lock-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(60,0,120,0.55); border-radius:8px;
+  font-size:20px; pointer-events:none; z-index:2;
+}
+/* Flash when entering lock-pick mode */
+@keyframes grid-lock-flash {
+  0%,100% { filter:brightness(1); }
+  50%     { filter:brightness(1.4) drop-shadow(0 0 8px rgba(167,139,250,0.8)); }
+}
+#mod-grid.lock-pick-mode { animation:grid-lock-flash 0.5s ease-in-out 2; }
+
 /* swap */
 #swap-area { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:68px; }
 #swap-top { font-family:'Barlow Condensed',sans-serif; font-size:8px; font-weight:900; letter-spacing:2px; color:var(--yellow); text-transform:uppercase; text-align:center; }
@@ -783,6 +825,7 @@ body {
       <div class="pgr-step"><span class="pgr-n">3</span><span class="pgr-t"><b>Best stat wins</b> everyone's card that round. Ties go to the pile — next winner takes them all.</span></div>
       <div class="pgr-step"><span class="pgr-n">4</span><span class="pgr-t">After 6 rules are used they <b>remix</b> with fresh stats.</span></div>
       <div class="pgr-step"><span class="pgr-n">🔄</span><span class="pgr-t"><b>SWAP</b> — steal your opponent's card before picking. 2 per game.</span></div>
+      <div class="pgr-step"><span class="pgr-n">🔒</span><span class="pgr-t"><b>LOCK</b> — block a battle stat once per game. In Live Table it stops your opponent using it. Solo: reveals the TM's value for that stat!</span></div>
       <div class="pgr-step"><span class="pgr-n">🏆</span><span class="pgr-t"><b>Last player with cards wins!</b></span></div>
     </div>
 
@@ -966,6 +1009,12 @@ body {
       <button id="swap-btn" disabled onclick="doSwap()">🔄 SWAP</button>
       <div id="swap-n">2 swaps left</div>
       <div id="swap-hint">Steal the better card!</div>
+    </div>
+    <div id="lock-area" style="display:none">
+      <div id="lock-top">BLOCK POWER</div>
+      <button id="lock-btn" disabled onclick="doLock()">🔒 LOCK</button>
+      <div id="lock-n">1 lock left</div>
+      <div id="lock-hint">Block a battle rule!</div>
     </div>
   </div>
 
@@ -1249,6 +1298,7 @@ let activePlayer=null, activeComp=null;
 let swapsLeft=2, canInteract=false, gameStarted=false;
 let modSetToggle=false, currentMods=[];
 let roundHistory=[];
+let lockLeft=1, lockPickMode=false, lockedModIdx=-1;
 
 // ══════════════════════════════════════════════════════
 //  SPLASH → LOBBY
@@ -1316,6 +1366,7 @@ function startSolo(){
   document.getElementById('scoreboard').style.display='none';
   document.getElementById('turn-banner').style.display='none';
   document.getElementById('swap-area').style.display='flex';
+  document.getElementById('lock-area').style.display='flex';
   document.getElementById('game').style.display='flex';
   document.getElementById('my-stack-lbl').textContent='Your Stack';
   buildModGrid();
@@ -1646,7 +1697,9 @@ function enterMPGame(room){
   document.getElementById('scoreboard').style.display='flex';
   document.getElementById('turn-banner').style.display='block';
   document.getElementById('swap-area').style.display='flex';
+  document.getElementById('lock-area').style.display='flex';
   swapsLeft=2;
+  lockLeft=1; lockPickMode=false; lockedModIdx=-1;
   document.getElementById('swap-n').textContent='2 swaps left';
   document.getElementById('swap-btn').disabled=true;
   document.getElementById('swap-hint').textContent='Steal an opponent\'s card!';
@@ -1688,6 +1741,25 @@ function enterMPGame(room){
     if(sw && sw.ts && sw.ts !== lastSwapTs){
       lastSwapTs = sw.ts;
       showSwapAnnounce(sw.byName, sw.from, sw.byId===myId);
+    }
+
+    // A lock was placed — show on opponent's grid
+    const lm=r.lockedMod;
+    if(lm && lm.byId !== myId && lm.roundNum === (r.turn||0)){
+      // Find the cell with this mod and mark it locked
+      document.querySelectorAll('.mod-cell').forEach(c=>{
+        const idx=parseInt(c.dataset.idx);
+        if(currentMods[idx]&&currentMods[idx].id===lm.modId&&currentMods[idx].type===lm.modType){
+          if(!c.classList.contains('stat-locked')){
+            c.classList.add('stat-locked');
+            lockedModIdx=idx;
+            const overlay=document.createElement('div');
+            overlay.className='mod-lock-overlay';
+            overlay.textContent='🔒';
+            c.querySelector('.mod-inner').appendChild(overlay);
+          }
+        }
+      });
     }
 
     // A mod was picked — show result on ALL screens
@@ -1939,12 +2011,17 @@ function showMPRound(roundNum, room){
       canInteract=true;
       lockMods(false);
       if(swapsLeft>0) document.getElementById('swap-btn').disabled=false;
+      if(lockLeft>0) document.getElementById('lock-btn').disabled=false;
       setStatus('⚡ YOUR TURN — pick a battle rule!');
       startTurnTimer(roundNum);
     } else {
       canInteract=false;
       lockMods(true);
+      lockPickMode=false;
+      document.getElementById('lock-btn').classList.remove('active-mode');
+      document.getElementById('lock-btn').textContent='🔒 LOCK';
       document.getElementById('swap-btn').disabled=true;
+      document.getElementById('lock-btn').disabled=true;
       const name=mpPlayers[activePid]?.name||'Player';
       setStatus(`⏳ ${name} is picking the battle rule...`);
     }
@@ -2034,6 +2111,16 @@ async function mpPickMod(mod){
   if(!canInteract) return;
   const activePid = mpTurnOrder[currentTurnIdx % mpTurnOrder.length];
   if(activePid !== myId) return;
+
+  // Can't pick the locked stat
+  const lockedCell = document.querySelector('.mod-cell.stat-locked');
+  if(lockedCell){
+    const lockedIdx = parseInt(lockedCell.dataset.idx);
+    if(currentMods[lockedIdx] && currentMods[lockedIdx].id===mod.id && currentMods[lockedIdx].type===mod.type){
+      setStatus('🔒 That stat is LOCKED — pick another!');
+      return;
+    }
+  }
 
   canInteract=false;
   lockMods(true);
@@ -2503,6 +2590,9 @@ function startRound(){
   if(playerDeck.length===0||compDeck.length===0){endGame();return;}
   const allUsed=document.querySelectorAll('.mod-cell.used').length===6;
   if(allUsed){setStatus('🔄 Rules remix!');setTimeout(()=>{buildModGrid(true);setStatus('⚡ New rules!');setTimeout(startRound,900);},600);return;}
+  // Clear previous round's lock visual (but not lockLeft — it's consumed once per game)
+  clearLockState();
+  lockPickMode=false;
   activePlayer=playerDeck.shift();
   activeComp=compDeck.shift();
   updateCounts();
@@ -2522,16 +2612,53 @@ function startRound(){
     pi.classList.add('flipped');sfxCardFlip();
     document.getElementById('player-slot').classList.add('revealed','your-turn');
     if(swapsLeft>0)document.getElementById('swap-btn').disabled=false;
+    if(lockLeft>0)document.getElementById('lock-btn').disabled=false;
     canInteract=true;
     setStatus('Pick a battle rule — choose wisely! 👇');
   },500);
 }
 
 function onModClick(cell,mod,idx){
+  // ── LOCK PICK MODE: selecting which stat to LOCK (block/intel) ──
+  if(lockPickMode){
+    if(cell.classList.contains('used')) return; // can't lock used stat
+    lockLeft--;
+    lockPickMode=false;
+    document.getElementById('lock-btn').classList.remove('active-mode');
+    document.getElementById('lock-btn').textContent='🔒 LOCK';
+    document.getElementById('lock-btn').disabled=true;
+    document.getElementById('lock-n').textContent='0 locks left';
+    document.getElementById('mod-grid').classList.remove('lock-pick-mode');
+    applyLockToCell(cell, idx);
+
+    if(isMP){
+      // MP: broadcast lock to Firebase — active player cannot pick this stat
+      db.ref('rooms/'+roomCode+'/lockedMod').set({
+        modIdx:idx, modId:mod.id, modType:mod.type,
+        byId:myId, roundNum:currentTurnIdx, ts:Date.now()
+      }).catch(()=>{});
+      setStatus(`🔒 ${mod.label} BLOCKED — opponent can't use it!`);
+    } else {
+      // Solo: reveal TM's value for that stat as intel
+      if(activeComp){
+        const tmVal = activeComp[mod.id];
+        const tmFmt = fmt(tmVal, mod.unit);
+        setStatus(`🔒 ${mod.label} LOCKED — TM has ${tmFmt}! Now pick your battle stat...`);
+        // Show a subtle intel badge on the locked cell
+        const overlay = cell.querySelector('.mod-lock-overlay');
+        if(overlay) overlay.innerHTML = `🔒<span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;color:#fde68a;display:block;margin-top:2px">TM: ${tmFmt}</span>`;
+      }
+    }
+    return;
+  }
+
   if(!canInteract)return;
   if(cell.classList.contains('used'))return;
+  // In solo, locked stat is still pickable (it was just for intel) but shows TM value
   canInteract=false;
   document.getElementById('swap-btn').disabled=true;
+  document.getElementById('lock-btn').disabled=true;
+  lockPickMode=false;
   cell.classList.add('used');sfxBoxReveal();
   setStatus(`${mod.icon} ${mod.label}! Revealing TM card...`);
   document.getElementById('tm-hint').style.opacity='0';
@@ -2665,6 +2792,68 @@ function doSwap(){
   }
 }
 
+
+// ══════════════════════════════════════════════════════
+//  LOCK STAT FEATURE
+// ══════════════════════════════════════════════════════
+function sfxLock(){
+  try{
+    const ctx=getCtx(),t=ctx.currentTime;
+    [0,0.08,0.18].forEach((d,i)=>{
+      const o=ctx.createOscillator(); o.type='square';
+      o.frequency.value=180+i*60;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.18,t+d); g.gain.exponentialRampToValueAtTime(0.001,t+d+0.12);
+      o.connect(g); g.connect(ctx.destination); o.start(t+d); o.stop(t+d+0.13);
+    });
+    const o2=ctx.createOscillator(); o2.type='triangle';
+    o2.frequency.setValueAtTime(600,t+0.22); o2.frequency.exponentialRampToValueAtTime(300,t+0.45);
+    const g2=ctx.createGain(); g2.gain.setValueAtTime(0.3,t+0.22); g2.gain.exponentialRampToValueAtTime(0.001,t+0.48);
+    o2.connect(g2); g2.connect(ctx.destination); o2.start(t+0.22); o2.stop(t+0.5);
+  }catch(e){}
+}
+
+function doLock(){
+  if(lockLeft<=0 || !canInteract) return;
+  if(lockPickMode){
+    // Cancel lock mode
+    lockPickMode=false;
+    document.getElementById('lock-btn').classList.remove('active-mode');
+    document.getElementById('lock-btn').textContent='🔒 LOCK';
+    document.getElementById('mod-grid').classList.remove('lock-pick-mode');
+    setStatus('Pick a battle rule — choose wisely! 👇');
+    return;
+  }
+  // Enter lock-pick mode
+  lockPickMode=true;
+  document.getElementById('lock-btn').classList.add('active-mode');
+  document.getElementById('lock-btn').textContent='❌ CANCEL';
+  document.getElementById('mod-grid').classList.add('lock-pick-mode');
+  setStatus('🔒 Tap a stat to BLOCK it — opponent can\'t use it!');
+}
+
+function applyLockToCell(cell, idx){
+  // Remove any previous lock visual
+  document.querySelectorAll('.mod-cell.stat-locked').forEach(c=>{
+    c.classList.remove('stat-locked');
+    const ov=c.querySelector('.mod-lock-overlay'); if(ov) ov.remove();
+  });
+  lockedModIdx = idx;
+  cell.classList.add('stat-locked');
+  const overlay=document.createElement('div');
+  overlay.className='mod-lock-overlay';
+  overlay.textContent='🔒';
+  cell.querySelector('.mod-inner').appendChild(overlay);
+  sfxLock();
+}
+
+function clearLockState(){
+  lockedModIdx=-1;
+  lockPickMode=false;
+  document.querySelectorAll('.mod-cell.stat-locked').forEach(c=>{
+    c.classList.remove('stat-locked');
+    const ov=c.querySelector('.mod-lock-overlay'); if(ov) ov.remove();
+  });
+}
 
 function updateCounts(){
   if(isMP){
@@ -2888,11 +3077,17 @@ function restartGame(){
   swapsLeft=2;canInteract=false;gameStarted=false;modSetToggle=false;
   mpGameOver=false;
   mpGameActive=false;
+  lockLeft=1;lockPickMode=false;lockedModIdx=-1;
   clearTurnTimer();
   ['player-count','comp-count','s-player','s-comp'].forEach(id=>document.getElementById(id).textContent='-');
   document.getElementById('pile-n').textContent='0';
   document.getElementById('swap-n').textContent='2 swaps left';
   document.getElementById('swap-btn').disabled=true;
+  document.getElementById('lock-n').textContent='1 lock left';
+  document.getElementById('lock-btn').disabled=true;
+  document.getElementById('lock-btn').textContent='🔒 LOCK';
+  document.getElementById('lock-btn').classList.remove('active-mode');
+  clearLockState();
   ['player-inner','comp-inner'].forEach(id=>{document.getElementById(id).classList.remove('flipped');});
   ['player-slot','comp-slot'].forEach(id=>{document.getElementById(id).classList.remove('revealed','your-turn');});
   document.getElementById('tm-hint').style.opacity='0';
