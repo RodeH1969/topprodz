@@ -942,6 +942,20 @@ body {
   <div id="splash-sub">Battle of the Product Stats</div>
 </div>
 
+<!-- JOIN OVERLAY — shown to invited players arriving via link -->
+<div id="join-overlay" style="display:none;position:fixed;inset:0;z-index:210;background:var(--dark);flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:16px;
+background-image:radial-gradient(ellipse at 20% 0%,rgba(0,61,165,0.25) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(255,102,0,0.15) 0%,transparent 60%);">
+  <div class="lobby-logo"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:4px;color:var(--orange)">YOU'RE INVITED!</div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.4)">JOINING ROOM</div>
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;letter-spacing:10px;color:var(--yellow);text-shadow:0 0 40px rgba(255,215,0,0.4)" id="join-overlay-code">----</div>
+  <div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px">
+    <input class="inp" id="join-overlay-name" type="text" maxlength="14" placeholder="Enter your name" autocomplete="off" spellcheck="false">
+    <button class="btn primary" style="font-size:22px;padding:16px" onclick="doJoinWithCode()">👉 JOIN THE BATTLE</button>
+    <div class="err" id="join-overlay-err"></div>
+  </div>
+</div>
+
 <!-- LOBBY -->
 <div id="lobby">
   <div class="lobby-logo"><img src="logo.png" alt="" onerror="this.style.display='none'"></div>
@@ -1356,31 +1370,18 @@ let soloRoundNum=0;
 window.addEventListener('DOMContentLoaded',()=>{
   ['touchstart','mousedown'].forEach(e=>document.addEventListener(e,()=>getCtx(),{once:true}));
 
-  // Auto-fill join code from URL param ?join=CODE
+  // Auto-join via URL param ?join=CODE — skip lobby, just ask for name
   const urlParams = new URLSearchParams(location.search);
   const joinCode = urlParams.get('join');
   if(joinCode){
     setTimeout(()=>{
-      setMode('multi');
-      document.getElementById('mode-multi').classList.add('active');
-      document.getElementById('mode-solo').classList.remove('active');
-      document.getElementById('join-code').value = joinCode.toUpperCase().slice(0,4);
-
-      // Make JOIN button pink + pulsing, dim CREATE
-      const joinBtn   = document.getElementById('join-btn');
-      const createBtn = document.getElementById('create-btn');
-      if(joinBtn){
-        joinBtn.classList.add('join-pulse');
-        joinBtn.textContent = '👉 JOIN ROOM — TAP HERE!';
-      }
-      if(createBtn){
-        createBtn.style.opacity='0.25';
-        createBtn.style.pointerEvents='none';
-      }
-
-      // Focus name field so they just type name and tap join
-      setTimeout(()=>document.getElementById('mp-name').focus(), 3100);
-    }, 3100);
+      // Hide lobby, show a minimal join panel
+      document.getElementById('lobby').style.display='none';
+      document.getElementById('join-overlay').style.display='flex';
+      document.getElementById('join-overlay-code').textContent=joinCode.toUpperCase().slice(0,4);
+      setTimeout(()=>document.getElementById('join-overlay-name').focus(), 200);
+    }, 3000);
+    window._pendingJoinCode = joinCode.toUpperCase().slice(0,4);
   }
   const card=document.getElementById('splash-card');
   card.animate([{transform:'scale(0.1) rotate(-180deg)',opacity:0},{transform:'scale(1.08) rotate(8deg)',opacity:1,offset:0.65},{transform:'scale(1) rotate(0)',opacity:1}],{duration:1300,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'forwards'});
@@ -1507,6 +1508,46 @@ async function doJoin(){
     setErr('Connection error: '+e.message);
     if(joinBtn) joinBtn.disabled=false;
   }
+}
+
+async function doJoinWithCode(){
+  const name = document.getElementById('join-overlay-name').value.trim();
+  const code = window._pendingJoinCode;
+  const errEl = document.getElementById('join-overlay-err');
+  if(!name){ errEl.textContent='Enter your name first'; return; }
+  if(!code){ errEl.textContent='No room code found'; return; }
+  errEl.textContent='';
+
+  try{
+    const snap = await db.ref('rooms/'+code).once('value');
+    if(!snap.exists()){ errEl.textContent='Room not found — ask for a new invite link'; return; }
+    const room = snap.val();
+
+    if(room.expiresAt && Date.now() > room.expiresAt){
+      errEl.textContent='Room has expired — ask host to create a new one'; return;
+    }
+    if(room.status==='playing'){
+      const startedAgo = Date.now() - (room.startedAt||0);
+      if(startedAgo > 60000){ errEl.textContent='Game already started'; return; }
+    }
+
+    const existingPlayers = room.players||{};
+    const existingEntry = Object.entries(existingPlayers).find(([,p])=>
+      p.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if(existingEntry){
+      const [pid] = existingEntry;
+      myName=name; myId=pid; amHost=(room.host===pid); roomCode=code;
+      document.getElementById('join-overlay').style.display='none';
+      enterWaiting(); return;
+    }
+    if(Object.keys(existingPlayers).length >= 2){ errEl.textContent='Room is full'; return; }
+
+    myName=name; myId=uid(); amHost=false; roomCode=code;
+    await db.ref('rooms/'+code+'/players/'+myId).set({name:myName, cards:0});
+    document.getElementById('join-overlay').style.display='none';
+    enterWaiting();
+  }catch(e){ errEl.textContent='Connection error: '+e.message; }
 }
 
 function setErr(msg){document.getElementById('lobby-err').textContent=msg;}
