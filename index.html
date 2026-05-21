@@ -226,7 +226,12 @@ body {
   cursor:pointer; transition:transform 0.1s;
 }
 .btn:active { transform:scale(0.97); }
-.btn.primary { background:var(--orange); color:#fff; box-shadow:0 4px 20px rgba(255,102,0,0.4); }
+.btn.primary { background:var(--orange); color:#fff; box-shadow:0 4px 20px rgba(255,102,0,0.4); animation:pulse-orange 1.8s ease-in-out infinite; }
+.inp:not(:focus) { animation:inp-nudge 3s ease-in-out infinite; }
+@keyframes inp-nudge {
+  0%,85%,100% { border-color:rgba(255,255,255,0.12); box-shadow:none; }
+  90%          { border-color:rgba(255,102,0,0.6); box-shadow:0 0 10px rgba(255,102,0,0.25); }
+}
 .btn.ghost {
   background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7);
   border:1.5px solid rgba(255,255,255,0.12); margin-top:8px; font-size:16px;
@@ -419,9 +424,28 @@ body {
 
 /* status */
 #status {
-  text-align:center; padding:5px 12px; min-height:26px;
+  text-align:center; padding:8px 14px; min-height:36px;
   font-family:'Barlow Condensed',sans-serif;
-  font-size:13px; font-weight:800; letter-spacing:0.5px; color:#fff;
+  font-size:16px; font-weight:900; letter-spacing:1px; color:#fff;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:10px; margin:4px 0;
+  transition:background 0.3s, border-color 0.3s;
+}
+#status.your-turn-status {
+  background:rgba(74,222,128,0.12);
+  border-color:rgba(74,222,128,0.4);
+  color:var(--green);
+  animation:status-pulse 1.4s ease-in-out infinite;
+}
+#status.opponent-status {
+  background:rgba(255,102,0,0.08);
+  border-color:rgba(255,102,0,0.25);
+  color:rgba(255,255,255,0.85);
+}
+@keyframes status-pulse {
+  0%,100% { box-shadow:none; }
+  50%      { box-shadow:0 0 16px rgba(74,222,128,0.3); }
 }
 
 /* ── MY CARD AREA ── */
@@ -558,7 +582,16 @@ body {
 .mod-cell.used .mod-stamp { transform:rotate(-18deg) scale(1); }
 .mod-cell.used .mod-inner { background:rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.05); cursor:not-allowed; }
 .mod-cell.used .mod-lbl,.mod-cell.used .mod-icon { opacity:0.2; }
-.mod-cell.locked .mod-inner { opacity:0.5; cursor:not-allowed; }
+.mod-cell.mod-strong .mod-inner {
+  background:rgba(74,222,128,0.12) !important;
+  border-color:rgba(74,222,128,0.5) !important;
+}
+.mod-cell.mod-strong .mod-lbl { color:#4ade80 !important; }
+.mod-cell.mod-weak .mod-inner {
+  background:rgba(248,113,113,0.08) !important;
+  border-color:rgba(248,113,113,0.3) !important;
+}
+.mod-cell.mod-weak .mod-lbl { color:rgba(248,113,113,0.7) !important; }
 
 /* ── STAT LOCK FEATURE ── */
 #lock-area { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:68px; }
@@ -917,10 +950,10 @@ body {
   <div class="panel" style="display:none" id="multi-panel">
     <div class="panel-title">LIVE TABLE</div>
     <input class="inp" id="mp-name" type="text" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
-    <button class="btn ghost" id="create-btn" onclick="doCreate()">🃏 CREATE ROOM</button>
-    <div class="divider"><hr><span>OR JOIN</span><hr></div>
+    <button class="btn primary" id="create-btn" onclick="doCreate()">🃏 CREATE ROOM</button>
+    <div class="divider"><hr><span>OR JOIN A FRIEND'S ROOM</span><hr></div>
     <input class="inp code-inp" id="join-code" type="text" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
-    <button class="btn primary" id="join-btn" onclick="doJoin()">JOIN ROOM</button>
+    <button class="btn ghost" id="join-btn" onclick="doJoin()">JOIN ROOM</button>
     <div class="err" id="lobby-err"></div>
   </div>
 </div>
@@ -970,6 +1003,7 @@ body {
 
   <!-- Status -->
   <div id="status">Tap DEAL to begin!</div>
+  <div id="round-counter" style="display:none;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:2px;">ROUND <span id="round-n">1</span></div>
 
   <!-- SOLO: TM row -->
   <div id="tm-row" style="display:flex;align-items:center;gap:10px;padding:8px 0">
@@ -1008,7 +1042,7 @@ body {
       <div id="swap-top">YOUR POWER</div>
       <button id="swap-btn" disabled onclick="doSwap()">🔄 SWAP</button>
       <div id="swap-n">2 swaps left</div>
-      <div id="swap-hint">Steal the better card!</div>
+      <div id="swap-hint">Blind swap — gamble!</div>
     </div>
     <div id="lock-area" style="display:none">
       <div id="lock-top">BLOCK POWER</div>
@@ -1299,6 +1333,7 @@ let swapsLeft=2, canInteract=false, gameStarted=false;
 let modSetToggle=false, currentMods=[];
 let roundHistory=[];
 let lockLeft=1, lockPickMode=false, lockedModIdx=-1;
+let soloRoundNum=0;
 
 // ══════════════════════════════════════════════════════
 //  SPLASH → LOBBY
@@ -1490,8 +1525,8 @@ function enterWaiting(){
   document.getElementById('lobby').style.display='none';
   document.getElementById('waiting').style.display='flex';
   document.getElementById('room-code').textContent=roomCode;
-  document.getElementById('w-spinner').style.display=amHost?'none':'block';
-  document.getElementById('start-btn').style.display=amHost?'block':'none';
+  document.getElementById('w-spinner').style.display=amHost?'block':'none';
+  document.getElementById('start-btn').style.display='none'; // hidden until opponent joins
   document.getElementById('waiting-sub').textContent=amHost
     ?'Share this code with friends to join'
     :'Waiting for host to start...';
@@ -1547,6 +1582,8 @@ function enterWaiting(){
     renderWaiting(mpPlayers);
 
     if(amHost && n > 1){
+      document.getElementById('start-btn').style.display='block';
+      document.getElementById('w-spinner').style.display='none';
       // Only update sub if not currently showing join message
       setTimeout(()=>{
         if(!document.getElementById('waiting-sub').classList.contains('player-joined')){
@@ -1702,7 +1739,7 @@ function enterMPGame(room){
   lockLeft=1; lockPickMode=false; lockedModIdx=-1;
   document.getElementById('swap-n').textContent='2 swaps left';
   document.getElementById('swap-btn').disabled=true;
-  document.getElementById('swap-hint').textContent='Steal an opponent\'s card!';
+  document.getElementById('swap-hint').textContent='Blind swap — gamble!';
   document.getElementById('live-room').textContent=roomCode;
   document.getElementById('my-label').textContent=myName;
   document.getElementById('my-stack-lbl').textContent=myName+"'s Stack";
@@ -1934,7 +1971,9 @@ function sfxDealIntro(){
 //  SHOW A ROUND (called on enter + after each result)
 // ══════════════════════════════════════════════════════
 function showMPRound(roundNum, room){
-  if(mpGameOver) return; // game finished — don't start a new round
+  if(mpGameOver) return;
+  document.getElementById('round-counter').style.display='block';
+  document.getElementById('round-n').textContent=roundNum+1;
   // If no room data passed, use cached mpHands (already populated on game enter)
   // Always use mpHands as it's set on game enter and never changes
   const allHands = mpHands;
@@ -2012,6 +2051,7 @@ function showMPRound(roundNum, room){
       lockMods(false);
       if(swapsLeft>0) document.getElementById('swap-btn').disabled=false;
       document.getElementById('lock-btn').disabled=true; // you're picking — can't lock
+      colourModGrid(activePlayer);
       setStatus('⚡ YOUR TURN — pick a battle rule!');
       startTurnTimer(roundNum);
     } else {
@@ -2537,8 +2577,7 @@ function renderMods(grid){
   grid.innerHTML='';
   currentMods.forEach((mod,i)=>{
     const cell=document.createElement('div');
-    cell.className='mod-cell'; cell.dataset.idx=i;
-    cell.innerHTML=`<div class="mod-inner" id="mod-inner-${i}">
+    cell.className='mod-cell'; cell.dataset.idx=i;    cell.innerHTML=`<div class="mod-inner" id="mod-inner-${i}">
       <span class="mod-icon">${mod.icon}</span>
       <span class="mod-lbl">${mod.label}</span>
       <div class="mod-stamp">USED</div></div>`;
@@ -2593,6 +2632,9 @@ function startRound(){
   // Clear previous round's lock visual (but not lockLeft — it's consumed once per game)
   clearLockState();
   lockPickMode=false;
+  soloRoundNum++;
+  document.getElementById('round-counter').style.display='block';
+  document.getElementById('round-n').textContent=soloRoundNum;
   activePlayer=playerDeck.shift();
   activeComp=compDeck.shift();
   updateCounts();
@@ -2614,6 +2656,7 @@ function startRound(){
     if(swapsLeft>0)document.getElementById('swap-btn').disabled=false;
     if(lockLeft>0)document.getElementById('lock-btn').disabled=false;
     canInteract=true;
+    colourModGrid(activePlayer);
     setStatus('Pick a battle rule — choose wisely! 👇');
   },500);
 }
@@ -2855,6 +2898,36 @@ function clearLockState(){
   });
 }
 
+function colourModGrid(card){
+  if(!card) return;
+  // Pre-compute averages for each stat across all products
+  const statIds=['protein','sugars','energy_kj','sodium','price','fat','dietary_fibre','carbohydrate','saturated_fat'];
+  const avgs={};
+  statIds.forEach(id=>{
+    const vals=ALL_PRODUCTS.map(p=>p[id]).filter(v=>v!=null);
+    avgs[id]=vals.reduce((a,b)=>a+b,0)/vals.length;
+  });
+  document.querySelectorAll('.mod-cell:not(.used)').forEach(cell=>{
+    const idx=parseInt(cell.dataset.idx);
+    const mod=currentMods[idx];
+    if(!mod)return;
+    cell.classList.remove('mod-strong','mod-weak');
+    const val=card[mod.id];
+    const avg=avgs[mod.id];
+    if(val==null||avg==null)return;
+    // "good" means winning on this stat
+    const goodIfHigh = mod.type==='high';
+    const ratio = val/avg;
+    if(goodIfHigh){
+      if(ratio>=1.15) cell.classList.add('mod-strong');
+      else if(ratio<=0.85) cell.classList.add('mod-weak');
+    } else {
+      if(ratio<=0.85) cell.classList.add('mod-strong');
+      else if(ratio>=1.15) cell.classList.add('mod-weak');
+    }
+  });
+}
+
 function updateCounts(){
   if(isMP){
     // Use Firebase scores as source of truth — total always = starting cards
@@ -2874,7 +2947,16 @@ function updateCounts(){
   document.getElementById('s-comp').textContent=compDeck.length+(activeComp?1:0);
 }
 
-function setStatus(msg){document.getElementById('status').textContent=msg;}
+function setStatus(msg){
+  const el=document.getElementById('status');
+  el.textContent=msg;
+  el.classList.remove('your-turn-status','opponent-status');
+  if(msg.includes('YOUR TURN')||msg.includes('Pick a battle')||msg.includes('LOCK a stat')){
+    el.classList.add('your-turn-status');
+  } else if(msg.includes('picking')||msg.includes('LOCKED —')||msg.includes('⏳')){
+    el.classList.add('opponent-status');
+  }
+}
 function openZoom(){
   const inner=document.getElementById('player-inner');
   if(!inner.classList.contains('flipped'))return;
@@ -3078,6 +3160,8 @@ function restartGame(){
   mpGameOver=false;
   mpGameActive=false;
   lockLeft=1;lockPickMode=false;lockedModIdx=-1;
+  soloRoundNum=0;
+  document.getElementById('round-counter').style.display='none';
   clearTurnTimer();
   ['player-count','comp-count','s-player','s-comp'].forEach(id=>document.getElementById(id).textContent='-');
   document.getElementById('pile-n').textContent='0';
