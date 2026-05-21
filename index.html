@@ -2642,6 +2642,7 @@ function renderMods(grid){
       <span class="mod-lbl">${mod.label}</span>
       <div class="mod-stamp">USED</div></div>`;
     cell.addEventListener('click',()=>{
+      if(lockPickMode){ onModClick(cell,mod,i); return; }
       if(isMP){mpPickMod(mod);}
       else onModClick(cell,mod,i);
     });
@@ -2918,7 +2919,8 @@ function sfxLock(){
 }
 
 function doLock(){
-  if(lockLeft<=0 || !canInteract) return;
+  if(lockLeft<=0) return;
+  if(!document.getElementById('lock-btn') || document.getElementById('lock-btn').disabled) return;
   if(lockPickMode){
     // Cancel lock mode
     lockPickMode=false;
